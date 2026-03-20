@@ -40,6 +40,7 @@ import { SearchableSelect } from './components/SearchableSelect';
 import { Skeleton } from './components/Skeleton';
 import Plant2D from './components/Plant2D';
 import { PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, Sector } from 'recharts';
+import ExcelConverter from './components/ExcelConverter';
 
 const AnyPie = Pie as any;
 
@@ -907,7 +908,7 @@ const renderActiveShape = (props: any) => {
 // --- Main App Component ---
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [view, setView] = useState<'map' | 'list'>('map');
+  const [view, setView] = useState<'map' | 'list' | 'converter'>('map');
   const [data, setData] = useState<{ allRows: InstallationRow[], uniqueInstallations: Installation[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1341,6 +1342,18 @@ export default function App() {
                 <List className="w-4 h-4" />
                 <span className="hidden sm:inline">Lista</span>
               </button>
+              <button
+                onClick={() => setView('converter')}
+                disabled={loading}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 active:shadow-none active:translate-y-1",
+                  view === 'converter' ? "bg-white text-blue-600 shadow-[0_4px_0_0_#cbd5e1]" : "text-slate-500 hover:text-slate-700 hover:bg-white/50 shadow-[0_4px_0_0_transparent]",
+                  loading && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                <span className="hidden sm:inline">Convertitore</span>
+              </button>
             </div>
             
             <button 
@@ -1542,6 +1555,16 @@ export default function App() {
                 onResetProvince={() => setSelectedProvince('')}
                 geocodingStatus={geocodingStatus}
               />
+            </motion.div>
+          ) : view === 'converter' ? (
+            <motion.div 
+              key="converter"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="h-full overflow-y-auto"
+            >
+              <ExcelConverter />
             </motion.div>
           ) : (
             <motion.div 
