@@ -78,9 +78,14 @@ const DetailModal: React.FC<DetailModalProps> = ({
     }
   };
 
-  const tankData: any[] = [];
+  const productDataMap: Record<string, { id: string, volume: number, color: string }> = {
+    Benzina: { id: 'Benzina', volume: 0, color: '#10b981' },
+    Gasolio: { id: 'Gasolio', volume: 0, color: '#f59e0b' },
+    Supreme: { id: 'Supreme', volume: 0, color: '#3b82f6' },
+    Altro: { id: 'Altro', volume: 0, color: '#94a3b8' }
+  };
+
   const seenTanks = new Set<string>();
-  const totals = { benzina: 0, gasolio: 0, supreme: 0 };
 
   installation.rows.forEach(row => {
     const tankId = row["ID Serbatoio"];
@@ -89,21 +94,44 @@ const DetailModal: React.FC<DetailModalProps> = ({
       const vol = parseFloat(row["Volume Serbatoio"]?.replace(',', '.') || '0');
       const product = row["Prodotto Serbatoio"] || 'N/D';
       const volume = isNaN(vol) ? 0 : vol;
-      
-      let color = '#94a3b8';
-      let category = 'Altro';
 
       if (product.toLowerCase().includes('sspb') || product.toLowerCase().includes('benzina')) {
-        color = '#10b981'; category = 'Benzina'; totals.benzina += volume;
+        productDataMap.Benzina.volume += volume;
       } else if (product.toLowerCase().includes('gas') || product.toLowerCase().includes('gasolio')) {
-        color = '#f59e0b'; category = 'Gasolio'; totals.gasolio += volume;
+        productDataMap.Gasolio.volume += volume;
       } else if (product.toLowerCase().includes('supreme')) {
-        color = '#3b82f6'; category = 'Supreme'; totals.supreme += volume;
+        productDataMap.Supreme.volume += volume;
+      } else {
+        productDataMap.Altro.volume += volume;
       }
-
-      tankData.push({ id: tankId, volume, product, color, category });
     }
   });
+
+  const tankData = Object.values(productDataMap).filter(d => d.volume > 0);
+
+  const isExpired = (dateString?: string) => {
+    if (!dateString) return false;
+    let parts = dateString.split(/[-/]/);
+    if (parts.length !== 3) return false;
+    
+    let year, month, day;
+    if (parts[0].length === 4) {
+      year = parseInt(parts[0]);
+      month = parseInt(parts[1]) - 1;
+      day = parseInt(parts[2]);
+    } else {
+      day = parseInt(parts[0]);
+      month = parseInt(parts[1]) - 1;
+      year = parseInt(parts[2]);
+    }
+    
+    const d = new Date(year, month, day);
+    if (isNaN(d.getTime())) return false;
+    
+    const now = new Date();
+    const diffMonths = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+    return diffMonths > 24;
+  };
 
   const performanceStats = [
     { name: 'EBITDA', value: installation.ebitda, color: installation.ebitda < 0 ? '#ef4444' : '#10b981', unit: '€' },
@@ -225,7 +253,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
                         { label: 'Gestore', value: installation.manager },
                         { label: 'Contratto Terreno', value: installation.contract },
                         { label: 'Contratto Gestore', value: installation.moso },
-                        { label: 'TLS', value: installation.tls }
+                        { label: 'Misura di Elettronico', value: installation.tls }
                       ].map((item) => (
                         <div key={item.label} className="flex justify-between items-center p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
                           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{item.label}</span>
@@ -239,16 +267,22 @@ const DetailModal: React.FC<DetailModalProps> = ({
                     <h4 className="text-lg font-black text-slate-900 flex items-center gap-3">
                       <Phone className="w-6 h-6 text-blue-600" /> Contatti
                     </h4>
-                    <div className="bg-slate-50 rounded-xl p-4 md:p-6 space-y-3 border border-slate-200">
-                       <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100">
+                       <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
                           <Phone className="w-4 h-4 text-blue-600" />
-                          <span className="text-sm font-bold text-slate-700">{installation.phone || 'N/D'}</span>
+                          {installation.phone ? (
+                            <a href={`tel:${installation.phone}`} className="text-sm font-bold text-blue-600 hover:underline">{installation.phone}</a>
+                          ) : (
+                            <span className="text-sm font-bold text-slate-700">N/D</span>
+                          )}
                        </div>
-                       <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100">
+                       <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
                           <Mail className="w-4 h-4 text-blue-600" />
-                          <span className="text-sm font-bold text-slate-700">{installation.email || 'N/D'}</span>
+                          {installation.email ? (
+                            <a href={`mailto:${installation.email}`} className="text-sm font-bold text-blue-600 hover:underline">{installation.email}</a>
+                          ) : (
+                            <span className="text-sm font-bold text-slate-700">N/D</span>
+                          )}
                        </div>
-                    </div>
                   </div>
                 </div>
 
@@ -264,17 +298,26 @@ const DetailModal: React.FC<DetailModalProps> = ({
                           <th className="px-4 py-3 font-bold">Prodotto</th>
                           <th className="px-4 py-3 font-bold">Capacità</th>
                           <th className="px-4 py-3 font-bold">Erogatore</th>
+                          <th className="px-4 py-3 font-bold">Modello</th>
+                          <th className="px-4 py-3 font-bold">Ultima Verifica</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {installation.rows.map((row, i) => (
-                          <tr key={i} className="hover:bg-slate-50">
-                            <td className="px-4 py-3 font-medium">Serbatoio {row["ID Serbatoio"]}</td>
-                            <td className="px-4 py-3">{row["Prodotto Serbatoio"]}</td>
-                            <td className="px-4 py-3">{row["Volume Serbatoio"]} Kl</td>
-                            <td className="px-4 py-3">{row["ID Erogatore"]}</td>
-                          </tr>
-                        ))}
+                        {installation.rows.map((row, i) => {
+                          const expired = isExpired(row["Ultima Verifica Erogatore"]);
+                          return (
+                            <tr key={i} className="hover:bg-slate-50">
+                              <td className="px-4 py-3 font-medium">Serbatoio {row["ID Serbatoio"]}</td>
+                              <td className="px-4 py-3">{row["Prodotto Serbatoio"]}</td>
+                              <td className="px-4 py-3">{row["Volume Serbatoio"]} Kl</td>
+                              <td className="px-4 py-3">{row["ID Erogatore"]}</td>
+                              <td className="px-4 py-3">{row["Modello Erogatore"]}</td>
+                              <td className={cn("px-4 py-3 font-medium", expired && "text-red-500 font-bold")}>
+                                {row["Ultima Verifica Erogatore"] || '-'} {expired && "(Scaduta)"}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

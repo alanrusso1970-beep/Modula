@@ -36,6 +36,14 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
     return acc;
   }, {} as Record<string, RealTimeData[]>);
 
+  const getProductColor = (productName: string) => {
+    const name = productName.toLowerCase();
+    if (name.includes('benzina') || name.includes('sspb')) return '#10b981'; // emerald-500 (Verde)
+    if (name.includes('diesel') || name.includes('gasolio')) return '#f59e0b'; // amber-500 (Arancione)
+    if (name.includes('supreme')) return '#3b82f6'; // blue-500 (Blu)
+    return '#64748b'; // slate-500 (Grigio defualt)
+  };
+
   const products = Object.keys(dataByProduct).sort();
 
   // Calculate percentage of "Servito" if data exists
@@ -116,12 +124,10 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
                   <div key={productName} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-6 bg-blue-500 rounded-full" />
+                        <div className="w-2 h-6 rounded-full" style={{ backgroundColor: getProductColor(productName) }} />
                         <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight">{productName}</h4>
                       </div>
-                      <div className="text-[10px] font-bold text-slate-400 bg-slate-50 px-3 py-1 rounded-full border border-slate-100 uppercase tracking-widest">
-                        Vendor Performance
-                      </div>
+                      {/* VENDOR PERFORMANCE Removed and Chart Legend moved to recharts */}
                     </div>
                     
                     <div className="h-[300px] w-full">
@@ -163,14 +169,14 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
                               return null;
                             }}
                           />
-                          <Legend verticalAlign="top" height={36}/>
+                          <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ paddingLeft: '20px' }} />
                           <Line 
                             type="monotone" 
                             dataKey="sellin" 
                             name="Sell-In (Corrente)"
-                            stroke="#2563eb" 
+                            stroke={getProductColor(productName)} 
                             strokeWidth={4} 
-                            dot={{ r: 4, fill: '#2563eb', strokeWidth: 2, stroke: '#fff' }} 
+                            dot={{ r: 4, fill: getProductColor(productName), strokeWidth: 2, stroke: '#fff' }} 
                             activeDot={{ r: 8 }}
                           />
                           <Line 

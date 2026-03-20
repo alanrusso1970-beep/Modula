@@ -555,6 +555,19 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setView('converter')}
+              disabled={loading}
+              className={cn(
+                "px-4 py-2 rounded-xl transition-all flex items-center gap-2 font-bold text-sm active:shadow-none active:translate-y-1",
+                view === 'converter' ? "bg-amber-500 text-white shadow-[0_4px_0_0_#d97706]" : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 shadow-[0_4px_0_0_#cbd5e1]",
+                loading && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span className="hidden sm:inline">Convertitore</span>
+            </button>
+
             <div className="flex bg-white/50 p-1 rounded-xl border border-white/50 shadow-sm">
               <button
                 onClick={() => setView('map')}
@@ -579,18 +592,6 @@ export default function App() {
               >
                 <List className="w-4 h-4" />
                 <span className="hidden sm:inline">Lista</span>
-              </button>
-              <button
-                onClick={() => setView('converter')}
-                disabled={loading}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 active:shadow-none active:translate-y-1",
-                  view === 'converter' ? "bg-white text-blue-600 shadow-[0_4px_0_0_#cbd5e1]" : "text-slate-500 hover:text-slate-700 hover:bg-white/50 shadow-[0_4px_0_0_transparent]",
-                  loading && "opacity-50 cursor-not-allowed"
-                )}
-              >
-                <FileSpreadsheet className="w-4 h-4" />
-                <span className="hidden sm:inline">Convertitore</span>
               </button>
             </div>
             
@@ -855,13 +856,13 @@ export default function App() {
                               e.stopPropagation();
                               fetchRealTimeData(inst);
                             }}
-                            className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all border border-emerald-100 shadow-[0_2px_0_0_#10b981] active:shadow-none active:translate-y-1"
+                            className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all border border-emerald-100 shadow-[0_2px_0_0_#10b981] active:shadow-none active:translate-y-1"
                             title="Aggiorna dati in tempo reale"
                           >
                             <Monitor className="w-4 h-4" />
                           </motion.button>
-                          <div className="w-6 h-6 rounded-lg bg-slate-50 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors border border-slate-200 group-hover:border-blue-600">
-                            <ChevronRight className="w-3 h-3" />
+                          <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors border border-slate-200 group-hover:border-blue-600">
+                            <ChevronRight className="w-4 h-4" />
                           </div>
                         </div>
                       </div>
