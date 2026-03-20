@@ -75,8 +75,15 @@ function processExcelData(data) {
  */
 function doPost(e) {
   try {
-    const data = JSON.parse(e.postData.contents);
-    const result = processExcelData(data);
+    const payload = JSON.parse(e.postData.contents);
+    let result;
+
+    if (payload.action === 'read') {
+      result = getRealTimeData(payload.pbl);
+    } else {
+      result = processExcelData(payload);
+    }
+
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
@@ -84,6 +91,68 @@ function doPost(e) {
       success: false,
       message: "Errore doPost: " + error.toString()
     })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * Searches for the latest "Export_STWD_" file and extracts data for a specific PBL from "DATI_YTD".
+ */
+function getRealTimeData(targetPbl) {
+  try {
+    const files = DriveApp.getFilesByName(`Export_STWD_*`); // Note: query search is better for wildcards
+    const fileIterator = DriveApp.searchFiles('name contains "Export_STWD_"');
+    
+    let latestFile = null;
+    let latestDate = 0;
+
+    while (fileIterator.hasNext()) {
+      const file = fileIterator.next();
+      const created = file.getDateCreated().getTime();
+      if (created > latestDate) {
+        latestDate = created;
+        latestFile = file;
+      }
+    }
+
+    if (!latestFile) {
+      return { success: false, message: "Nessun file 'Export_STWD_' trovato su Google Drive." };
+    }
+
+    const ss = SpreadsheetApp.open(latestFile);
+    const sheet = ss.getSheetByName("DATI_YTD");
+    
+    if (!sheet) {
+      return { success: false, message: "Foglio 'DATI_YTD' non trovato nell'ultimo export." };
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    
+    // Column indices (0-based)
+    // A=0 (PBL), N=13 (Mesi), P=15 (Sellin), Q=16 (Servito?), S=18 (SellinPY)
+    const filteredRows = data.slice(1).filter(row => row[0].toString() === targetPbl.toString());
+
+    if (filteredRows.length === 0) {
+      return { success: false, message: `Nessun dato trovato per il PBL: ${targetPbl} nel file ${latestFile.getName()}` };
+    }
+
+    // Map rows to a more useful format for Recharts
+    const dashboardData = filteredRows.map(row => ({
+      mese: row[13],
+      sellin: parseFloat(row[15]) || 0,
+      servito: parseFloat(row[16]) || 0,
+      sellinPY: parseFloat(row[18]) || 0
+    }));
+
+    return {
+      success: true,
+      pbl: targetPbl,
+      fileName: latestFile.getName(),
+      data: dashboardData
+    };
+
+  } catch (error) {
+    return { success: false, message: "Errore nel recupero dati: " + error.toString() };
   }
 }
 

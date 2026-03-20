@@ -14,7 +14,7 @@ declare global {
 
 // TO THE USER: After deploying the backend.gs as a Web App in Google Apps Script, 
 // copy the "Web App URL" and paste it here.
-const GAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxBz8UuyJkZT8CyzMhkphiaZ4CUwlE7fcwgz_JQ7xiYlN0BH9qWJCBVgDET6sbO6SZ9nw/exec";
+const GAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzvJDqWa2VTs_MpT-i9vCP1VCSPaBqrquonEmbTIsCuDxqAmi7_qhWAw9sXp5lnlalSXA/exec";
 
 interface LogMessage {
   id: string;

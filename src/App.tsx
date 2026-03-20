@@ -58,6 +58,15 @@ let DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
+const GAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzvJDqWa2VTs_MpT-i9vCP1VCSPaBqrquonEmbTIsCuDxqAmi7_qhWAw9sXp5lnlalSXA/exec";
+
+interface RealTimeData {
+  mese: string;
+  sellin: number;
+  servito: number;
+  sellinPY: number;
+}
+
 // --- Login Screen ---
 const LoginScreen = ({ onLogin }: { onLogin: () => void }) => {
   const [password, setPassword] = useState('');
@@ -905,6 +914,181 @@ const renderActiveShape = (props: any) => {
   );
 };
 
+// --- Real-Time Dashboard Modal ---
+const RealTimeDashboardModal = ({ 
+  plant, 
+  data, 
+  loading, 
+  onClose 
+}: { 
+  plant: Installation | null, 
+  data: RealTimeData[], 
+  loading: boolean, 
+  onClose: () => void 
+}) => {
+  if (!plant) return null;
+
+  // Calculate percentage of "Servito" if data exists
+  // Formula: Q / (P + Q) -> row[16] / (row[15] + row[16])
+  // In our mapped data: servito / (sellin + servito)
+  const totalSellin = data.reduce((acc, curr) => acc + curr.sellin, 0);
+  const totalServito = data.reduce((acc, curr) => acc + curr.servito, 0);
+  const servitoPercentage = totalSellin + totalServito > 0 
+    ? (totalServito / (totalSellin + totalServito)) * 100 
+    : 0;
+
+  return (
+    <div className="fixed inset-0 z-[4000] flex items-center justify-center p-4">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
+      />
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="relative bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+      >
+        <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-white px-8">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 vivid-gradient rounded-xl flex items-center justify-center shadow-lg">
+              <Monitor className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-900 tracking-tight">Dati in Tempo Reale</h3>
+              <p className="text-slate-500 text-xs font-medium">{plant.city} - PBL: {plant.pbl}</p>
+            </div>
+          </div>
+          <motion.button 
+            whileHover={{ rotate: 90, scale: 1.1 }}
+            onClick={onClose}
+            className="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all"
+          >
+            <X className="w-5 h-5 text-slate-500" />
+          </motion.button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-50">
+          {loading ? (
+            <div className="h-[400px] flex flex-col items-center justify-center gap-4">
+              <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-slate-500 font-bold animate-pulse">Sincronizzazione con Google Drive...</p>
+            </div>
+          ) : data.length > 0 ? (
+            <>
+              {/* Summary Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Totale Sell-In</p>
+                  <p className="text-2xl font-black text-blue-600 font-mono">{Math.round(totalSellin).toLocaleString('it-IT')} L</p>
+                </div>
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Totale Sell-In PY</p>
+                  <p className="text-2xl font-black text-slate-400 font-mono">{Math.round(data.reduce((acc, curr) => acc + curr.sellinPY, 0)).toLocaleString('it-IT')} L</p>
+                </div>
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">% Servito</p>
+                  <p className="text-2xl font-black text-emerald-600 font-mono">
+                    {servitoPercentage.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
+                  </p>
+                </div>
+              </div>
+
+              {/* Chart */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Trend Mensile: Vendite vs Anno Precedente</h4>
+                <div className="h-[350px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis 
+                        dataKey="mese" 
+                        fontSize={11}
+                        fontWeight="bold"
+                        tick={{ fill: '#94a3b8' }}
+                      />
+                      <YAxis 
+                        fontSize={11}
+                        fontWeight="bold"
+                        tick={{ fill: '#94a3b8' }}
+                        tickFormatter={(value) => `${(value / 1000).toLocaleString('it-IT')}k`}
+                      />
+                      <ReTooltip 
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-white p-4 rounded-xl shadow-lg border border-slate-200 min-w-[180px]">
+                                <p className="font-bold text-slate-700 mb-2 border-b border-slate-100 pb-2">{label}</p>
+                                <div className="space-y-2">
+                                  {payload.map((entry: any, index: number) => (
+                                    <div key={index} className="flex justify-between items-center gap-4 text-sm">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                                        <span className="font-medium text-slate-500">{entry.name}</span>
+                                      </div>
+                                      <span className="font-bold text-slate-900">{Math.round(entry.value).toLocaleString('it-IT')} L</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Legend verticalAlign="top" height={36}/>
+                      <Line 
+                        type="monotone" 
+                        dataKey="sellin" 
+                        name="Sell-In"
+                        stroke="#2563eb" 
+                        strokeWidth={4} 
+                        dot={{ r: 4, fill: '#2563eb', strokeWidth: 2, stroke: '#fff' }} 
+                        activeDot={{ r: 8 }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="sellinPY" 
+                        name="Sell-In Anno Prec."
+                        stroke="#94a3b8" 
+                        strokeWidth={2} 
+                        strokeDasharray="5 5"
+                        dot={{ r: 4, fill: '#94a3b8', strokeWidth: 2, stroke: '#fff' }} 
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="h-[300px] flex flex-col items-center justify-center text-center space-y-4">
+              <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center">
+                <X className="w-8 h-8 text-slate-400" />
+              </div>
+              <div>
+                <p className="text-slate-900 font-bold">Nessun dato disponibile</p>
+                <p className="text-slate-500 text-sm">Non abbiamo trovato dati YTD per questo PBL nell'ultimo export.</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="p-6 border-t border-slate-100 bg-white">
+          <button 
+            onClick={onClose}
+            className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-slate-800 transition-all active:scale-[0.98]"
+          >
+            Chiudi Dashboard
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 // --- Main App Component ---
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -942,6 +1126,41 @@ export default function App() {
   const [showDashboard, setShowDashboard] = useState(false);
   const [geocodingStatus, setGeocodingStatus] = useState<{ current: number, total: number } | null>(null);
   const [activePieIndex, setActivePieIndex] = useState(0);
+
+  // --- Real-Time Dashboard State ---
+  const [showRealTimePopup, setShowRealTimePopup] = useState(false);
+  const [isFetchingRealTime, setIsFetchingRealTime] = useState(false);
+  const [realTimeData, setRealTimeData] = useState<RealTimeData[]>([]);
+  const [realTimePlant, setRealTimePlant] = useState<Installation | null>(null);
+
+  const fetchRealTimeData = async (plant: Installation) => {
+    setRealTimePlant(plant);
+    setShowRealTimePopup(true);
+    setIsFetchingRealTime(true);
+    setRealTimeData([]);
+
+    try {
+      const response = await fetch(GAS_SCRIPT_URL, {
+        method: 'POST',
+        // Note: GAS requires no-cors for simple redirects, but many setups work with a proxy
+        // Since the user is on Cloudflare, we might need to handle CORS if not using no-cors.
+        // But for reading data, the GAS script must return a proper JSON response with CORS or we use a trick.
+        // For now, let's try a standard fetch.
+        body: JSON.stringify({ action: 'read', pbl: plant.pbl }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setRealTimeData(result.data);
+      } else {
+        console.error("Errore recupero dati real-time:", result.message);
+      }
+    } catch (error) {
+      console.error("Errore fetch real-time:", error);
+    } finally {
+      setIsFetchingRealTime(false);
+    }
+  };
 
   useEffect(() => {
     const logged = sessionStorage.getItem('isLoggedIn') === 'true';
@@ -1615,12 +1834,12 @@ export default function App() {
                             whileTap={{ scale: 0.9 }}
                             onClick={(e) => {
                               e.stopPropagation();
-                              alert(`Apertura file Excel condiviso per ${inst.city} (PBL: ${inst.pbl})`);
+                              fetchRealTimeData(inst);
                             }}
-                            className="w-6 h-6 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-indigo-500 hover:text-white transition-all border border-slate-200 shadow-[0_2px_0_0_#cbd5e1] active:shadow-none active:translate-y-1"
+                            className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all border border-emerald-100 shadow-[0_2px_0_0_#10b981] active:shadow-none active:translate-y-1"
                             title="Aggiorna dati in tempo reale"
                           >
-                            <Monitor className="w-3 h-3 hidden" />
+                            <Monitor className="w-4 h-4" />
                           </motion.button>
                           <div className="w-6 h-6 rounded-lg bg-slate-50 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors border border-slate-200 group-hover:border-blue-600">
                             <ChevronRight className="w-3 h-3" />
@@ -1702,6 +1921,15 @@ export default function App() {
             chart2Image={chart2Image}
             chart1Ref={chart1Ref}
             chart2Ref={chart2Ref}
+          />
+        )}
+        {showRealTimePopup && (
+          <RealTimeDashboardModal
+            key="realtime-modal"
+            plant={realTimePlant}
+            data={realTimeData}
+            loading={isFetchingRealTime}
+            onClose={() => setShowRealTimePopup(false)}
           />
         )}
         <div key="dashboard-modal" className={cn("fixed inset-0 z-[3000] flex items-center justify-center p-4 transition-all duration-300", showDashboard ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none")}>
