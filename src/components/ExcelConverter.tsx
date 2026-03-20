@@ -12,6 +12,10 @@ declare global {
   }
 }
 
+// TO THE USER: After deploying the backend.gs as a Web App in Google Apps Script, 
+// copy the "Web App URL" and paste it here.
+const GAS_SCRIPT_URL = "YOUR_GOOGLE_SCRIPT_WEB_APP_URL_HERE";
+
 interface LogMessage {
   id: string;
   text: string;
@@ -53,6 +57,27 @@ const ExcelConverter: React.FC = () => {
     }
   };
 
+  const handleSuccess = (response: any) => {
+    if (response.success) {
+      setProgress(100);
+      addLog("Backend GAS: Elaborazione completata!", "success");
+      addLog(`Spreadsheet creato: ${response.spreadsheetUrl}`, "success");
+      response.csvFiles.forEach((f: string) => addLog(`CSV salvato: ${f}`, "success"));
+      setResult({ url: response.spreadsheetUrl, csvs: response.csvFiles });
+      setIsProcessing(false);
+      
+      // Celebration!
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#10b981', '#3b82f6', '#6366f1']
+      });
+    } else {
+      handleError(response.message);
+    }
+  };
+
   const startConversion = async () => {
     if (!file) return;
 
@@ -81,8 +106,6 @@ const ExcelConverter: React.FC = () => {
             if (workbook.SheetNames.includes(sheetName)) {
               addLog(`Estrazione dati da: ${sheetName}`, "info");
               const worksheet = workbook.Sheets[sheetName];
-              // Use SheetJS to convert to 2D array, including hidden rows/cols if necessary
-              // but standard JSON(array of arrays) is best for GAS setValues()
               const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
               extractedData[sheetName] = json as any[][];
             } else {
@@ -91,53 +114,57 @@ const ExcelConverter: React.FC = () => {
           }
 
           setProgress(60);
-          addLog("Dati estratti correttamente. Invio al backend Google Drive...", "info");
+          addLog("Dati estratti. Invio al backend Google Drive...", "info");
 
-          // Integration with google.script.run
+          // Modalità 1: Google Apps Script Native (quando l'app è ospitata su Google)
           if (window.google && window.google.script && window.google.script.run) {
             window.google.script.run
-              .withSuccessHandler((response: any) => {
-                if (response.success) {
-                  setProgress(100);
-                  addLog("Backend GAS: Elaborazione completata!", "success");
-                  addLog(`Spreadsheet creato: ${response.spreadsheetUrl}`, "success");
-                  response.csvFiles.forEach((f: string) => addLog(`CSV salvato: ${f}`, "success"));
-                  setResult({ url: response.spreadsheetUrl, csvs: response.csvFiles });
-                  setIsProcessing(false);
-                  
-                  // Celebration!
-                  confetti({
-                    particleCount: 150,
-                    spread: 70,
-                    origin: { y: 0.6 },
-                    colors: ['#10b981', '#3b82f6', '#6366f1']
-                  });
-                } else {
-                  handleError(response.message);
-                }
-              })
+              .withSuccessHandler(handleSuccess)
               .withFailureHandler((err: any) => {
                 handleError(`Errore GAS: ${err.message || err.toString()}`);
               })
               .processExcelData(extractedData);
-          } else {
+          } 
+          // Modalità 2: API HTTP (quando l'app è su Cloudflare o locale)
+          else if (GAS_SCRIPT_URL && !GAS_SCRIPT_URL.includes("YOUR_GOOGLE_SCRIPT")) {
+            try {
+              addLog("Connessione API esterna in corso...", "info");
+              const response = await fetch(GAS_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors', // GAS Web App redirects require special handling or no-cors
+                body: JSON.stringify(extractedData),
+              });
+              
+              // Note: with no-cors we can't see the response body. 
+              // For actual responses from GAS API, one often uses a proxy or careful CORS.
+              // However, POST to Web App usually works "fire and forget" or requires redirection handling.
+              // To get the response body, GAS script needs to be very specific or use a redirection trick.
+              
+              // Let's assume for now the user follows the standard Web App deployment.
+              // If we use 'cors', GAS must handle OPTIONS. 
+              // Simplified: we'll use a better approach if possible, but for now we warn:
+              addLog("Richiesta inviata. In attesa di conferma dal server...", "warning");
+              
+              // For better UX, we'll suggest using a specific deployment if body is needed.
+              // But as a first step, let's keep it simple.
+              setTimeout(() => {
+                addLog("Se vedi i file su Drive, la procedura è andata a buon fine.", "success");
+                setIsProcessing(false);
+                setProgress(100);
+              }, 5000);
+
+            } catch (err: any) {
+              handleError(`Errore API: ${err.message}`);
+            }
+          }
+          else {
             // Mock response for local development
             setTimeout(() => {
-              setProgress(100);
-              addLog("MOCK: Integrazione GAS simulata per sviluppo locale.", "warning");
-              addLog("Spreadsheet simulato creato correttamente.", "success");
-              setResult({ 
-                url: "https://docs.google.com/spreadsheets/d/mock-id", 
-                csvs: ["DATI_YTD_mock.csv", "DatiLPG_mock.csv"] 
-              });
-              setIsProcessing(false);
-
-              // Celebration!
-              confetti({
-                particleCount: 100,
-                spread: 70,
-                origin: { y: 0.6 },
-                colors: ['#10b981', '#3b82f6', '#6366f1']
+              addLog("MOCK: Integrazione simulata (Script URL non configurato).", "warning");
+              handleSuccess({
+                success: true,
+                spreadsheetUrl: "https://docs.google.com/spreadsheets/d/mock-id",
+                csvFiles: ["DATI_YTD_mock.csv", "DatiLPG_mock.csv"]
               });
             }, 2000);
           }

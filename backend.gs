@@ -71,6 +71,23 @@ function processExcelData(data) {
 }
 
 /**
+ * Handle POST requests from external sources (e.g., Cloudflare Workers)
+ */
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const result = processExcelData(data);
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      message: "Errore doPost: " + error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
  * Utility to convert a sheet to CSV string
  */
 function convertSheetToCsv(sheet) {
