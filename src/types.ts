@@ -42,3 +42,11 @@ export interface Installation {
   lat?: number;
   lng?: number;
 }
+
+export interface RealTimeData {
+  mese: string;
+  prodotto: string;
+  sellin: number;
+  servito: number;
+  sellinPY: number;
+}

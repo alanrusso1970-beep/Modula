@@ -14,7 +14,7 @@ declare global {
 
 // TO THE USER: After deploying the backend.gs as a Web App in Google Apps Script, 
 // copy the "Web App URL" and paste it here.
-const GAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzvJDqWa2VTs_MpT-i9vCP1VCSPaBqrquonEmbTIsCuDxqAmi7_qhWAw9sXp5lnlalSXA/exec";
+const GAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbykayQoMqHfvrni5p-l443HINtk1WxL4sPEExpxjB_HeTaDENMXuui58kYXzmmZXtc3/exec";
 
 interface LogMessage {
   id: string;
@@ -65,7 +65,7 @@ const ExcelConverter: React.FC = () => {
       response.csvFiles.forEach((f: string) => addLog(`CSV salvato: ${f}`, "success"));
       setResult({ url: response.spreadsheetUrl, csvs: response.csvFiles });
       setIsProcessing(false);
-      
+
       // Celebration!
       confetti({
         particleCount: 150,
@@ -90,12 +90,12 @@ const ExcelConverter: React.FC = () => {
 
     try {
       const reader = new FileReader();
-      
+
       reader.onload = async (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
-          
+
           setProgress(30);
           addLog(`Workbook letto. Fogli trovati: ${workbook.SheetNames.join(', ')}`, "info");
 
@@ -124,7 +124,7 @@ const ExcelConverter: React.FC = () => {
                 handleError(`Errore GAS: ${err.message || err.toString()}`);
               })
               .processExcelData(extractedData);
-          } 
+          }
           // Modalità 2: API HTTP (quando l'app è su Cloudflare o locale)
           else if (GAS_SCRIPT_URL && !GAS_SCRIPT_URL.includes("YOUR_GOOGLE_SCRIPT")) {
             try {
@@ -134,17 +134,17 @@ const ExcelConverter: React.FC = () => {
                 mode: 'no-cors', // GAS Web App redirects require special handling or no-cors
                 body: JSON.stringify(extractedData),
               });
-              
+
               // Note: with no-cors we can't see the response body. 
               // For actual responses from GAS API, one often uses a proxy or careful CORS.
               // However, POST to Web App usually works "fire and forget" or requires redirection handling.
               // To get the response body, GAS script needs to be very specific or use a redirection trick.
-              
+
               // Let's assume for now the user follows the standard Web App deployment.
               // If we use 'cors', GAS must handle OPTIONS. 
               // Simplified: we'll use a better approach if possible, but for now we warn:
               addLog("Richiesta inviata. In attesa di conferma dal server...", "warning");
-              
+
               // For better UX, we'll suggest using a specific deployment if body is needed.
               // But as a first step, let's keep it simple.
               setTimeout(() => {
@@ -190,7 +190,7 @@ const ExcelConverter: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden"
@@ -213,8 +213,8 @@ const ExcelConverter: React.FC = () => {
           <div className="space-y-4">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Carica File Excel (.xlsx, .xls)</label>
             <div className="relative group">
-              <input 
-                type="file" 
+              <input
+                type="file"
                 accept=".xlsx, .xls"
                 onChange={handleFileChange}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
@@ -253,8 +253,8 @@ const ExcelConverter: React.FC = () => {
               disabled={!file || isProcessing}
               className={cn(
                 "w-full sm:w-auto px-12 py-4 rounded-2xl font-extrabold text-lg transition-all flex items-center justify-center gap-3 shadow-lg",
-                !file || isProcessing 
-                  ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none" 
+                !file || isProcessing
+                  ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
                   : "bg-blue-600 text-white hover:bg-blue-500 shadow-blue-500/20"
               )}
             >
@@ -274,7 +274,7 @@ const ExcelConverter: React.FC = () => {
             {/* Progress Bar */}
             <AnimatePresence>
               {(isProcessing || progress > 0) && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
@@ -285,7 +285,7 @@ const ExcelConverter: React.FC = () => {
                     <span>{progress}%</span>
                   </div>
                   <div className="h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                    <motion.div 
+                    <motion.div
                       className="h-full bg-gradient-to-r from-blue-500 to-emerald-500"
                       initial={{ width: 0 }}
                       animate={{ width: `${progress}%` }}
@@ -315,19 +315,19 @@ const ExcelConverter: React.FC = () => {
               ) : (
                 <div className="space-y-2.5">
                   {logs.map((log) => (
-                    <motion.div 
+                    <motion.div
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      key={log.id} 
+                      key={log.id}
                       className="flex gap-4 border-l-2 border-transparent hover:border-slate-700 pl-2 transition-colors"
                     >
                       <span className="text-slate-600 whitespace-nowrap shrink-0">{log.timestamp}</span>
                       <span className={cn(
                         "break-all leading-relaxed",
                         log.type === 'error' ? "text-rose-400 font-bold" :
-                        log.type === 'success' ? "text-emerald-400 font-bold" :
-                        log.type === 'warning' ? "text-amber-400" :
-                        "text-slate-400"
+                          log.type === 'success' ? "text-emerald-400 font-bold" :
+                            log.type === 'warning' ? "text-amber-400" :
+                              "text-slate-400"
                       )}>
                         {log.text}
                       </span>
@@ -342,7 +342,7 @@ const ExcelConverter: React.FC = () => {
           {/* Results Area */}
           <AnimatePresence>
             {result && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6"
@@ -356,11 +356,11 @@ const ExcelConverter: React.FC = () => {
                       <h4 className="text-emerald-900 font-bold text-lg">Conversione Completata!</h4>
                       <p className="text-emerald-700 text-sm">I file sono stati creati e salvati su Google Drive.</p>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <a 
-                        href={result.url} 
-                        target="_blank" 
+                      <a
+                        href={result.url}
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center justify-between px-4 py-3 bg-white border border-emerald-200 rounded-xl text-emerald-700 font-bold hover:bg-emerald-100 transition-colors group"
                       >
@@ -384,7 +384,7 @@ const ExcelConverter: React.FC = () => {
           {/* Error Message */}
           <AnimatePresence>
             {error && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 className="bg-rose-50 border border-rose-200 rounded-2xl p-6 flex items-start gap-4"

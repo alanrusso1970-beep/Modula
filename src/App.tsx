@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, Suspense, lazy, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Fuel, 
@@ -30,843 +30,23 @@ import {
 import { saveAs } from 'file-saver';
 import Papa from 'papaparse';
 import domtoimage from 'dom-to-image-more';
-import { pdf } from '@react-pdf/renderer';
-import { InstallationPDF } from './components/InstallationPDF';
 import { fetchInstallations } from './services/dataService';
-import { Installation, InstallationRow } from './types';
+import { Installation, InstallationRow, RealTimeData } from './types';
 import { cn } from './lib/utils';
-import Plant3D from './components/Plant3D';
-import { SearchableSelect } from './components/SearchableSelect';
 import { Skeleton } from './components/Skeleton';
-import Plant2D from './components/Plant2D';
+import { SearchableSelect } from './components/SearchableSelect';
 import { PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, Sector } from 'recharts';
-import ExcelConverter from './components/ExcelConverter';
 
 const AnyPie = Pie as any;
 
-import L from 'leaflet';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+// Lazy load components
+const LoginScreen = lazy(() => import('./components/LoginScreen'));
+const MapView = lazy(() => import('./components/MapView'));
+const DetailModal = lazy(() => import('./components/DetailModal'));
+const ExcelConverter = lazy(() => import('./components/ExcelConverter'));
+const RealTimeDashboardModal = lazy(() => import('./components/RealTimeDashboardModal'));
 
-// Fix for default marker icon
-let DefaultIcon = L.icon({
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41]
-});
-
-L.Marker.prototype.options.icon = DefaultIcon;
-
-const GAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzvJDqWa2VTs_MpT-i9vCP1VCSPaBqrquonEmbTIsCuDxqAmi7_qhWAw9sXp5lnlalSXA/exec";
-
-interface RealTimeData {
-  mese: string;
-  sellin: number;
-  servito: number;
-  sellinPY: number;
-}
-
-// --- Login Screen ---
-const LoginScreen = ({ onLogin }: { onLogin: () => void }) => {
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState(false);
-
-  const handleLogin = () => {
-    if (password === 'toil') {
-      onLogin();
-    } else {
-      setError(true);
-      setTimeout(() => setError(false), 2000);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-slate-50 z-[2000] flex items-center justify-center p-4 overflow-hidden liquid-bg">
-      {/* Vibrant Background Blobs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-400/20 blur-[120px] rounded-full animate-pulse" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-400/20 blur-[120px] rounded-full animate-pulse delay-700" />
-      <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] bg-purple-400/10 blur-[100px] rounded-full animate-pulse delay-1000" />
-
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ type: "spring", damping: 20, stiffness: 100 }}
-        className="bg-white p-10 rounded-3xl w-full max-w-md relative z-10 border border-slate-200 shadow-xl"
-      >
-        <div className="flex flex-col items-center text-center mb-10">
-          <motion.div 
-            whileHover={{ rotate: 5, scale: 1.05 }}
-            className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500/20"
-          >
-            <Fuel className="w-10 h-10 text-white" />
-          </motion.div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">MODULA</h2>
-          <p className="text-slate-500 mt-3 font-medium text-base">Gestione intelligente degli impianti.</p>
-        </div>
-
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Access Key</label>
-            <div className="relative">
-              <input 
-                type="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                placeholder="••••••••"
-                className={cn(
-                  "w-full px-6 py-4 rounded-xl border outline-none transition-all text-lg font-bold tracking-widest bg-slate-50",
-                  error ? "border-red-500 ring-2 ring-red-500/20" : "border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                )}
-              />
-            </div>
-          </div>
-          
-          <motion.button 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleLogin}
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl transition-all shadow-[0_4px_0_0_#2563eb] active:shadow-none active:translate-y-1 flex items-center justify-center gap-2 text-base"
-          >
-            Accedi al Sistema
-            <ChevronRight className="w-5 h-5" />
-          </motion.button>
-
-          {error && (
-            <motion.p 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-red-600 text-sm font-bold text-center bg-red-50 py-3 rounded-xl border border-red-100"
-            >
-              Accesso negato. Riprova.
-            </motion.p>
-          )}
-        </div>
-
-        <div className="mt-10 pt-8 border-t border-slate-100 flex justify-between px-4">
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center border border-emerald-100">
-              <TrendingUp className="w-5 h-5 text-emerald-600" />
-            </div>
-            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Analisi</span>
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100">
-              <MapIcon className="w-5 h-5 text-blue-600" />
-            </div>
-            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Mappe</span>
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center border border-purple-100">
-              <Database className="w-5 h-5 text-purple-600" />
-            </div>
-            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Asset</span>
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  );
-};
-
-// --- Map Component ---
-const MapUpdater = ({ center, zoom }: { center: [number, number], zoom: number }) => {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(center, zoom);
-    // Force a resize check to ensure the map fills the container correctly
-    setTimeout(() => {
-      map.invalidateSize();
-    }, 100);
-  }, [center, zoom, map]);
-  return null;
-};
-
-const MapView = ({ installations, onProceed, onResetProvince, geocodingStatus }: { 
-  installations: Installation[], 
-  onProceed: (province?: string) => void,
-  onResetProvince: () => void,
-  geocodingStatus: { current: number, total: number } | null
-}) => {
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [mapSearch, setMapSearch] = useState('');
-
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        () => console.log("Geolocation failed")
-      );
-    }
-  }, []);
-
-  // Filter installations based on map search
-  const filteredMapInstallations = installations.filter(inst => 
-    inst.city.toLowerCase().includes(mapSearch.toLowerCase()) || 
-    inst.province.toLowerCase().includes(mapSearch.toLowerCase()) ||
-    inst.pbl.toLowerCase().includes(mapSearch.toLowerCase())
-  );
-
-  // Calculate the center of all installations with coordinates
-  const installationsWithCoords = filteredMapInstallations.filter(inst => inst.lat && inst.lng);
-  
-  let initialCenter: [number, number] = [41.9028, 12.4964]; // Default to Rome
-  let initialZoom = 6;
-
-  if (installationsWithCoords.length > 0) {
-    const avgLat = installationsWithCoords.reduce((sum, inst) => sum + (inst.lat || 0), 0) / installationsWithCoords.length;
-    const avgLng = installationsWithCoords.reduce((sum, inst) => sum + (inst.lng || 0), 0) / installationsWithCoords.length;
-    initialCenter = [avgLat, avgLng];
-    
-    // Adjust zoom based on search or number of installations
-    if (mapSearch) {
-      initialZoom = 10;
-    } else if (installationsWithCoords.length < 5) {
-      initialZoom = 9;
-    } else {
-      initialZoom = 7;
-    }
-  } else if (userLocation) {
-    initialCenter = [userLocation.lat, userLocation.lng];
-    initialZoom = 10;
-  }
-
-  // Group installations by province for the map
-  const provinceGroups = filteredMapInstallations.reduce((acc, inst) => {
-    if (inst.lat && inst.lng) {
-      const key = inst.province;
-      if (!acc[key]) {
-        acc[key] = {
-          province: inst.province,
-          lat: inst.lat,
-          lng: inst.lng,
-          count: 0,
-          installations: []
-        };
-      }
-      acc[key].count++;
-      acc[key].installations.push(inst);
-    }
-    return acc;
-  }, {} as Record<string, { province: string, lat: number, lng: number, count: number, installations: Installation[] }>);
-
-  const createClusterIcon = (count: number) => {
-    return L.divIcon({
-      html: `<div class="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold border-2 border-white shadow-lg text-lg">${count}</div>`,
-      className: 'custom-cluster-icon',
-      iconSize: [40, 40],
-      iconAnchor: [20, 20]
-    });
-  };
-
-  return (
-    <div className="absolute inset-0 bg-slate-100 overflow-hidden">
-      <MapContainer 
-        center={initialCenter} 
-        zoom={initialZoom} 
-        style={{ height: '100%', width: '100%' }}
-        zoomControl={false}
-      >
-        <MapUpdater center={initialCenter} zoom={initialZoom} />
-        <TileLayer
-          attribution='&copy; Google'
-          url="https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
-          subdomains={['mt0','mt1','mt2','mt3']}
-        />
-        
-        {userLocation && (
-          <Marker position={[userLocation.lat, userLocation.lng]}>
-            <Popup>La tua posizione</Popup>
-          </Marker>
-        )}
-
-        {Object.values(provinceGroups).map(group => (
-          <Marker 
-            key={group.province} 
-            position={[group.lat, group.lng]}
-            icon={createClusterIcon(group.count)}
-            eventHandlers={{
-              click: () => onProceed(group.province)
-            }}
-          />
-        ))}
-      </MapContainer>
-
-      {/* Floating Info Card */}
-      <div className="absolute bottom-6 left-6 z-[1000] hidden sm:block">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white p-5 rounded-2xl min-w-[260px] border border-slate-200 shadow-lg"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-500/20">
-              <MapIcon className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Network Status</p>
-              <p className="text-2xl font-black text-slate-900 tracking-tight">
-                {installations.filter(i => i.lat && i.lng).length} <span className="text-sm font-bold text-slate-400">/ {installations.length}</span>
-              </p>
-            </div>
-          </div>
-          
-          {geocodingStatus && (
-            <div className="mt-5">
-              <div className="flex justify-between text-[10px] font-bold text-blue-600 mb-1.5 tracking-widest">
-                <span>MAPPATURA ASSET</span>
-                <span>{Math.round((geocodingStatus.current / geocodingStatus.total) * 100)}%</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                <motion.div 
-                  className="bg-blue-600 h-full rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(geocodingStatus.current / geocodingStatus.total) * 100}%` }}
-                />
-              </div>
-            </div>
-          )}
-        </motion.div>
-      </div>
-
-      {/* User Location Button */}
-      <div className="absolute bottom-6 right-6 z-[1000] flex flex-col gap-3">
-        <motion.button 
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => {
-            if (userLocation) {
-              // Map re-centering logic
-            }
-          }}
-          className="bg-white p-4 rounded-2xl text-slate-600 hover:text-blue-600 transition-all shadow-[0_4px_0_0_#cbd5e1] active:shadow-none active:translate-y-1 border border-slate-200 flex items-center justify-center gap-2"
-        >
-          <Navigation className="w-6 h-6" />
-        </motion.button>
-      </div>
-    </div>
-  );
-};
-
-// --- Installation Detail Modal ---
-const isOlderThanTwoYears = (dateStr?: string) => {
-  if (!dateStr || dateStr === '-' || dateStr === 'N/D') return false;
-  
-  let year, month, day;
-  if (dateStr.includes('/')) {
-    const parts = dateStr.split('/');
-    if (parts.length === 3) {
-      day = parseInt(parts[0], 10);
-      month = parseInt(parts[1], 10) - 1;
-      year = parseInt(parts[2], 10);
-    }
-  } else if (dateStr.includes('-')) {
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      year = parseInt(parts[0], 10);
-      month = parseInt(parts[1], 10) - 1;
-      day = parseInt(parts[2], 10);
-    }
-  }
-
-  if (year && month !== undefined && day) {
-    const date = new Date(year, month, day);
-    const twoYearsAgo = new Date();
-    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
-    return date < twoYearsAgo;
-  }
-  
-  return false;
-};
-
-const formatMonthYear = (dateStr?: string) => {
-  if (!dateStr || dateStr === '-' || dateStr === 'N/D') return dateStr || '-';
-  
-  if (dateStr.includes('/')) {
-    const parts = dateStr.split('/');
-    if (parts.length === 3) {
-      return `${parts[1]}/${parts[2]}`;
-    }
-  } else if (dateStr.includes('-')) {
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      return `${parts[1]}/${parts[0]}`;
-    }
-  }
-  return dateStr;
-};
-
-const DetailModal = ({ 
-  installation, 
-  onClose, 
-  chart1Image, 
-  chart2Image,
-  chart1Ref,
-  chart2Ref
-}: { 
-  installation: Installation, 
-  onClose: () => void, 
-  chart1Image: string | null, 
-  chart2Image: string | null,
-  chart1Ref: React.RefObject<HTMLDivElement>,
-  chart2Ref: React.RefObject<HTMLDivElement>
-}) => {
-  const [show3D, setShow3D] = useState(false);
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const [planImage, setPlanImage] = useState<string | null>(null);
-  const planImageRef = useRef<string | null>(null);
-  const reportRef = useRef<HTMLDivElement>(null);
-
-  const handleCapture = (dataUrl: string) => {
-    if (dataUrl && dataUrl.length > 5000) {
-      setPlanImage(dataUrl);
-      planImageRef.current = dataUrl;
-    }
-  };
-
-  const handleDownloadPDF = async () => {
-    setIsGeneratingPDF(true);
-    
-    // Ensure we have the plan image before generating
-    if (!planImageRef.current) {
-      // Wait up to 10 seconds for the plan image to be captured
-      let attempts = 0;
-      while (!planImageRef.current && attempts < 100) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-      }
-    }
-
-    try {
-      const blob = await pdf(
-        <InstallationPDF 
-          installation={installation} 
-          planImage={planImageRef.current} 
-        />
-      ).toBlob();
-      
-      saveAs(blob, `Report_${installation.city}_${installation.pbl}.pdf`);
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-    } finally {
-      setIsGeneratingPDF(false);
-    }
-  };
-
-  const tankData: { id: string, volume: number, product: string, color: string, category: string }[] = [];
-  const seenTanks = new Set<string>();
-  
-  const totals = {
-    benzina: 0,
-    gasolio: 0,
-    supreme: 0
-  };
-
-  installation.rows.forEach(row => {
-    const tankId = row["ID Serbatoio"];
-    if (tankId && !seenTanks.has(tankId)) {
-      seenTanks.add(tankId);
-      const vol = parseFloat(row["Volume Serbatoio"]?.replace(',', '.') || '0');
-      const product = row["Prodotto Serbatoio"] || 'N/D';
-      const volume = isNaN(vol) ? 0 : vol;
-      
-      let color = '#94a3b8'; // Default slate
-      let category = 'Altro';
-
-      if (product.toLowerCase().includes('sspb') || product.toLowerCase().includes('benzina')) {
-        color = '#10b981'; // Verde
-        category = 'Benzina';
-        totals.benzina += volume;
-      } else if (product.toLowerCase().includes('gas') || product.toLowerCase().includes('gasolio')) {
-        color = '#f59e0b'; // Arancione
-        category = 'Gasolio';
-        totals.gasolio += volume;
-      } else if (product.toLowerCase().includes('supreme')) {
-        color = '#3b82f6'; // Blu
-        category = 'Supreme';
-        totals.supreme += volume;
-      }
-
-      tankData.push({
-        id: tankId,
-        volume,
-        product,
-        color,
-        category
-      });
-    }
-  });
-
-  const performanceStats = [
-    { name: 'EBITDA', value: installation.ebitda, color: installation.ebitda < 0 ? '#ef4444' : '#10b981', unit: '€' },
-    { name: 'Sell_IN', value: installation.sell, color: '#3b82f6', unit: 'L' },
-  ];
-
-  return (
-    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4">
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
-      />
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        className="relative bg-white w-full max-w-6xl h-full md:h-auto md:max-h-[90vh] md:rounded-2xl overflow-hidden flex flex-col shadow-2xl"
-      >
-        {/* Hidden 2D Plan Capture - Using visibility: hidden instead of far off-screen to ensure rendering */}
-        <div style={{ position: 'fixed', left: 0, top: 0, visibility: 'hidden', pointerEvents: 'none', zIndex: -1 }}>
-          <Plant2D installation={installation} onCapture={handleCapture} />
-        </div>
-
-        <div className="p-4 md:p-6 border-b border-slate-200 flex items-center justify-between bg-white sticky top-0 z-20 shadow-sm">
-          <div className="flex items-center gap-4 md:gap-6">
-            <div className="w-10 h-10 md:w-12 md:h-12 vivid-gradient rounded-xl flex items-center justify-center shadow-md">
-              <Fuel className="w-5 h-5 md:w-6 md:h-6" stroke="url(#vivid-icon-gradient)" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-0.5">
-                <h3 className="text-lg md:text-xl font-bold text-slate-900 tracking-tight">{installation.city}</h3>
-                <span className="bg-slate-100 text-slate-600 text-[9px] md:text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border border-slate-200">PBL: {installation.pbl}</span>
-              </div>
-              <p className="text-slate-500 text-[10px] md:text-xs font-medium flex items-center gap-1.5">
-                <MapIcon className="w-2.5 h-2.5 md:w-3 h-3" stroke="url(#vivid-icon-gradient)" /> {installation.address}, {installation.cap} ({installation.province})
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 md:gap-3">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleDownloadPDF}
-              disabled={isGeneratingPDF}
-              className={cn(
-                "px-3 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest transition-all flex items-center gap-2 shadow-[0_4px_0_0_#10b981] active:shadow-none active:translate-y-1",
-                isGeneratingPDF 
-                  ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none translate-y-1" 
-                  : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200"
-              )}
-            >
-              <FileDown className={cn("w-3 h-3 md:w-4 md:h-4", isGeneratingPDF && "animate-bounce")} stroke="url(#vivid-icon-gradient)" />
-              <span className="hidden sm:inline">{isGeneratingPDF ? 'Generazione...' : 'Report PDF'}</span>
-            </motion.button>
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setShow3D(!show3D)}
-              className={cn(
-                "px-3 md:px-4 py-1.5 md:py-2 rounded-lg font-bold text-[9px] md:text-[10px] uppercase tracking-widest transition-all flex items-center gap-1.5 active:shadow-none active:translate-y-1",
-                show3D ? "vivid-gradient text-white shadow-[0_2px_0_0_#4f46e5]" : "bg-slate-100 text-slate-600 hover:bg-slate-200 shadow-[0_2px_0_0_#cbd5e1]"
-              )}
-            >
-              {show3D ? <List className="w-3 h-3" /> : <Box className="w-3 h-3" stroke="url(#vivid-icon-gradient)" />}
-              <span className="hidden sm:inline">{show3D ? "Dati" : "3D"}</span>
-            </motion.button>
-            <motion.button 
-              whileHover={{ rotate: 90, scale: 1.1 }}
-              onClick={onClose} 
-              className="p-2 md:p-3 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all shadow-[0_4px_0_0_#cbd5e1] active:shadow-none active:translate-y-1 flex items-center justify-center"
-            >
-              <X className="w-6 h-6 md:w-8 md:h-8 hidden" stroke="url(#vivid-icon-gradient)" />
-            </motion.button>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 bg-slate-50">
-          <AnimatePresence mode="wait">
-            {show3D ? (
-              <motion.div 
-                key="3d"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                className="space-y-8"
-              >
-                <Plant3D installation={installation} />
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Complessità Asset</p>
-                    <p className="text-2xl font-mono font-bold text-slate-900">Alta</p>
-                    <p className="text-xs text-slate-500 mt-1">Basata su numero di serbatoi ed erogatori.</p>
-                  </div>
-                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Serbatoi Rilevati</p>
-                    <p className="text-2xl font-mono font-bold text-slate-900">{tankData.length}</p>
-                    <p className="text-xs text-slate-500 mt-1">Visualizzati nel modello interrato.</p>
-                  </div>
-                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Erogatori Rilevati</p>
-                    <p className="text-2xl font-mono font-bold text-slate-900">
-                      {new Set(installation.rows.map(r => r["ID Erogatore"]).filter(id => id && id !== "-")).size}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">Visualizzati sotto la tettoia.</p>
-                  </div>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div 
-                key="data"
-                initial={{ opacity: 0, scale: 1.05 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.05 }}
-                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                className="space-y-10"
-              >
-                <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200 shadow-sm">
-                  <h4 className="text-lg font-black text-slate-900 mb-6 md:mb-8 flex items-center gap-3">
-                    <TrendingUp className="w-6 h-6" stroke="url(#vivid-icon-gradient)" /> Performance & Capacità
-                  </h4>
-                  
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-10">
-                    {/* EBITDA & Sell_IN Column */}
-                    <div className="lg:col-span-1 space-y-4 md:space-y-6">
-                      {performanceStats.map((item) => (
-                        <div key={item.name} className="bg-slate-50 p-5 rounded-xl border border-slate-200 shadow-sm">
-                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">{item.name} 2025</p>
-                          <p className="text-2xl md:text-3xl font-mono font-bold tracking-tight" style={{ color: item.color }}>
-                            {item.name === 'EBITDA' 
-                              ? item.value.toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
-                              : `${Math.round(item.value).toLocaleString('it-IT')} ${item.unit}`}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Tanks Column */}
-                    <div className="lg:col-span-2 space-y-4">
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Capacità Serbatoi (Kl)</p>
-                      <div className="h-[260px] w-full bg-slate-50 rounded-xl p-4 md:p-6 border border-slate-200 shadow-sm">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={tankData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                            <XAxis 
-                              dataKey="id" 
-                              fontSize={11} 
-                              fontWeight="bold" 
-                              tickLine={false} 
-                              axisLine={false}
-                              tick={{ fill: '#64748b' }}
-                            />
-                            <YAxis 
-                              fontSize={11} 
-                              fontWeight="bold" 
-                              tickLine={false} 
-                              axisLine={false}
-                              tick={{ fill: '#64748b' }}
-                            />
-                            <ReTooltip 
-                              cursor={{ fill: '#f1f5f9', radius: 8 }}
-                              content={({ active, payload }) => {
-                                if (active && payload && payload.length) {
-                                  const data = payload[0].payload;
-                                  return (
-                                    <div className="bg-white p-4 rounded-xl shadow-lg border border-slate-200 min-w-[180px]">
-                                      <div className="flex items-center gap-2 mb-3">
-                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: data.color }}></div>
-                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Serbatoio {data.id}</p>
-                                      </div>
-                                      <div className="space-y-2">
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{data.category}</p>
-                                        <p className="text-xs text-slate-700 font-bold truncate max-w-[140px]">{data.product}</p>
-                                        <div className="pt-3 border-t border-slate-100 mt-2">
-                                          <p className="text-xl font-mono font-bold" style={{ color: data.color }}>
-                                            {(data.volume).toLocaleString('it-IT', { maximumFractionDigits: 0 })} <span className="text-[10px] opacity-70">Kl</span>
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                }
-                                return null;
-                              }}
-                            />
-                            <Bar 
-                              dataKey="volume" 
-                              radius={[4, 4, 0, 0]} 
-                              barSize={32}
-                            >
-                              {tankData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                              ))}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                      
-                      {/* Legend with Summations */}
-                      <div className="grid grid-cols-3 gap-3 md:gap-4 mt-6">
-                        <div className="bg-slate-50 p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-2 h-2 rounded-full bg-[#10b981]"></div>
-                            <span className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest">Benzina</span>
-                          </div>
-                          <p className="text-sm md:text-lg font-mono font-bold text-slate-900">{(totals.benzina).toLocaleString('it-IT', { maximumFractionDigits: 0 })} Kl</p>
-                        </div>
-                        <div className="bg-slate-50 p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-2 h-2 rounded-full bg-[#f59e0b]"></div>
-                            <span className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest">Gasolio</span>
-                          </div>
-                          <p className="text-sm md:text-lg font-mono font-bold text-slate-900">{(totals.gasolio).toLocaleString('it-IT', { maximumFractionDigits: 0 })} Kl</p>
-                        </div>
-                        <div className="bg-slate-50 p-3 md:p-4 rounded-xl border border-slate-200 shadow-sm">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="w-2 h-2 rounded-full bg-[#3b82f6]"></div>
-                            <span className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest">Supreme</span>
-                          </div>
-                          <p className="text-sm md:text-lg font-mono font-bold text-slate-900">{(totals.supreme).toLocaleString('it-IT', { maximumFractionDigits: 0 })} Kl</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                  <div className="space-y-6">
-                    <h4 className="text-lg font-black text-slate-900 flex items-center gap-3">
-                      <Info className="w-6 h-6" stroke="url(#vivid-icon-gradient)" /> Informazioni Generali
-                    </h4>
-                    <div className="bg-slate-50 rounded-xl p-4 md:p-6 space-y-3 border border-slate-200 shadow-sm">
-                      {[
-                        { label: 'Gestore', value: installation.manager },
-                        { label: 'Contratto Terreno', value: installation.contract },
-                        { label: 'Contratto Gestore', value: installation.moso },
-                        { label: 'TLS', value: installation.tls }
-                      ].map((item) => (
-                        <div key={item.label} className="flex justify-between items-center p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
-                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{item.label}</span>
-                          <span className="text-sm font-black text-slate-900">{item.value || 'N/D'}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <h4 className="text-lg font-black text-slate-900 flex items-center gap-3">
-                      <Phone className="w-6 h-6" stroke="url(#vivid-icon-gradient)" /> Contatti & Supporto
-                    </h4>
-                    <div className="bg-slate-50 rounded-xl p-4 md:p-6 space-y-3 border border-slate-200 shadow-sm">
-                      {installation.phone && installation.phone !== 'N/D' && installation.phone !== '-' ? (
-                        <a href={`tel:${installation.phone.replace(/\s+/g, '')}`} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm hover:border-blue-300 hover:shadow-md transition-all group">
-                          <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                            <Phone className="w-4 h-4" stroke="url(#vivid-icon-gradient)" />
-                          </div>
-                          <span className="text-sm font-bold text-slate-700 group-hover:text-blue-700 transition-colors">{installation.phone}</span>
-                        </a>
-                      ) : (
-                        <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm opacity-60">
-                          <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center">
-                            <Phone className="w-4 h-4" stroke="url(#vivid-icon-gradient)" />
-                          </div>
-                          <span className="text-sm font-bold text-slate-500">N/D</span>
-                        </div>
-                      )}
-                      {installation.email && installation.email !== 'N/D' && installation.email !== '-' ? (
-                        <a href={`mailto:${installation.email}`} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm hover:border-blue-300 hover:shadow-md transition-all group">
-                          <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                            <Mail className="w-4 h-4" stroke="url(#vivid-icon-gradient)" />
-                          </div>
-                          <span className="text-sm font-bold text-slate-700 group-hover:text-blue-700 transition-colors truncate">{installation.email}</span>
-                        </a>
-                      ) : (
-                        <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm opacity-60">
-                          <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center">
-                            <Mail className="w-4 h-4" stroke="url(#vivid-icon-gradient)" />
-                          </div>
-                          <span className="text-sm font-bold text-slate-500">N/D</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  <h4 className="text-lg font-black text-slate-900 flex items-center gap-3">
-                    <Database className="w-6 h-6" stroke="url(#vivid-icon-gradient)" /> Dotazione Asset Completa
-                  </h4>
-                  <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 border-b border-slate-200">
-                        <tr>
-                          <th className="px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[10px]">ID Serb.</th>
-                          <th className="px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[10px]">Prodotto</th>
-                          <th className="px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[10px]">Volume</th>
-                          <th className="px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[10px]">Erogatore</th>
-                          <th className="px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[10px]">Modello Erog.</th>
-                          <th className="px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[10px]">Pistole</th>
-                          <th className="px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[10px]">Ultima Verifica</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {installation.rows.map((row, idx) => {
-                          const isOldInspection = isOlderThanTwoYears(row["Ultima Verifica Erogatore"]);
-                          return (
-                          <tr key={`${row["ID Serbatoio"]}-${row["Matricola Erogatore"]}-${idx}`} className={cn("transition-colors", isOldInspection ? "bg-red-50 hover:bg-red-100" : "hover:bg-slate-50")}>
-                            <td className="px-3 py-2 font-mono text-slate-700">{row["ID Serbatoio"] || '-'}</td>
-                            <td className="px-3 py-2 font-medium text-slate-700">
-                              <div className="flex items-center gap-1.5">
-                                {row["Prodotto Serbatoio"] && row["Prodotto Serbatoio"] !== "-" && (
-                                  <div className={cn(
-                                    "w-1.5 h-1.5 rounded-full",
-                                    row["Prodotto Serbatoio"].toLowerCase().includes('benzina') ? 'bg-emerald-500' :
-                                    row["Prodotto Serbatoio"].toLowerCase().includes('gasolio') ? 'bg-amber-500' :
-                                    row["Prodotto Serbatoio"].toLowerCase().includes('supreme') ? 'bg-blue-500' : 'bg-slate-300'
-                                  )}></div>
-                                )}
-                                {row["Prodotto Serbatoio"] || '-'}
-                              </div>
-                            </td>
-                            <td className="px-3 py-2 font-mono text-blue-600">{row["Volume Serbatoio"] || '-'}</td>
-                            <td className="px-3 py-2 font-medium text-slate-600">{row["Tipo Erogatore"] || '-'}</td>
-                            <td className="px-3 py-2 font-medium text-slate-700">{row["Modello Erogatore"] || '-'}</td>
-                            <td className="px-3 py-2 font-mono text-slate-600">{row["Pistole Erogatore"] || '-'}</td>
-                            <td className={cn("px-3 py-2 font-medium whitespace-nowrap", isOldInspection ? "text-red-600 font-bold" : "text-slate-600")}>
-                              {formatMonthYear(row["Ultima Verifica Erogatore"])}
-                            </td>
-                          </tr>
-                        )})}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-      <div className="p-4 md:p-6 border-t border-slate-200 bg-slate-50 flex gap-4 rounded-b-2xl">
-          <motion.button 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${installation.address}, ${installation.city}`)}`, '_blank')}
-            className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-[0_4px_0_0_#2563eb] active:shadow-none active:translate-y-1 text-sm"
-          >
-             <MapIcon className="w-4 h-4" stroke="url(#vivid-icon-gradient)" /> Maps
-          </motion.button>
-          <motion.button 
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={onClose}
-            className="flex-1 bg-white hover:bg-slate-50 text-slate-700 font-medium py-3 rounded-xl transition-all border border-slate-200 shadow-[0_4px_0_0_#cbd5e1] active:shadow-none active:translate-y-1 flex items-center justify-center gap-2 text-sm"
-          >
-            <LogOut className="w-4 h-4" stroke="url(#vivid-icon-gradient)" /> Exit
-          </motion.button>
-        </div>
-      </motion.div>
-    </div>
-  );
-};
+const GAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbykayQoMqHfvrni5p-l443HINtk1WxL4sPEExpxjB_HeTaDENMXuui58kYXzmmZXtc3/exec";
 
 const renderActiveShape = (props: any) => {
   const RADIAN = Math.PI / 180;
@@ -914,181 +94,6 @@ const renderActiveShape = (props: any) => {
   );
 };
 
-// --- Real-Time Dashboard Modal ---
-const RealTimeDashboardModal = ({ 
-  plant, 
-  data, 
-  loading, 
-  onClose 
-}: { 
-  plant: Installation | null, 
-  data: RealTimeData[], 
-  loading: boolean, 
-  onClose: () => void 
-}) => {
-  if (!plant) return null;
-
-  // Calculate percentage of "Servito" if data exists
-  // Formula: Q / (P + Q) -> row[16] / (row[15] + row[16])
-  // In our mapped data: servito / (sellin + servito)
-  const totalSellin = data.reduce((acc, curr) => acc + curr.sellin, 0);
-  const totalServito = data.reduce((acc, curr) => acc + curr.servito, 0);
-  const servitoPercentage = totalSellin + totalServito > 0 
-    ? (totalServito / (totalSellin + totalServito)) * 100 
-    : 0;
-
-  return (
-    <div className="fixed inset-0 z-[4000] flex items-center justify-center p-4">
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
-      />
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
-      >
-        <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-white px-8">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 vivid-gradient rounded-xl flex items-center justify-center shadow-lg">
-              <Monitor className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="text-xl font-black text-slate-900 tracking-tight">Dati in Tempo Reale</h3>
-              <p className="text-slate-500 text-xs font-medium">{plant.city} - PBL: {plant.pbl}</p>
-            </div>
-          </div>
-          <motion.button 
-            whileHover={{ rotate: 90, scale: 1.1 }}
-            onClick={onClose}
-            className="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all"
-          >
-            <X className="w-5 h-5 text-slate-500" />
-          </motion.button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-50">
-          {loading ? (
-            <div className="h-[400px] flex flex-col items-center justify-center gap-4">
-              <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-slate-500 font-bold animate-pulse">Sincronizzazione con Google Drive...</p>
-            </div>
-          ) : data.length > 0 ? (
-            <>
-              {/* Summary Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Totale Sell-In</p>
-                  <p className="text-2xl font-black text-blue-600 font-mono">{Math.round(totalSellin).toLocaleString('it-IT')} L</p>
-                </div>
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Totale Sell-In PY</p>
-                  <p className="text-2xl font-black text-slate-400 font-mono">{Math.round(data.reduce((acc, curr) => acc + curr.sellinPY, 0)).toLocaleString('it-IT')} L</p>
-                </div>
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">% Servito</p>
-                  <p className="text-2xl font-black text-emerald-600 font-mono">
-                    {servitoPercentage.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
-                  </p>
-                </div>
-              </div>
-
-              {/* Chart */}
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Trend Mensile: Vendite vs Anno Precedente</h4>
-                <div className="h-[350px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis 
-                        dataKey="mese" 
-                        fontSize={11}
-                        fontWeight="bold"
-                        tick={{ fill: '#94a3b8' }}
-                      />
-                      <YAxis 
-                        fontSize={11}
-                        fontWeight="bold"
-                        tick={{ fill: '#94a3b8' }}
-                        tickFormatter={(value) => `${(value / 1000).toLocaleString('it-IT')}k`}
-                      />
-                      <ReTooltip 
-                        content={({ active, payload, label }) => {
-                          if (active && payload && payload.length) {
-                            return (
-                              <div className="bg-white p-4 rounded-xl shadow-lg border border-slate-200 min-w-[180px]">
-                                <p className="font-bold text-slate-700 mb-2 border-b border-slate-100 pb-2">{label}</p>
-                                <div className="space-y-2">
-                                  {payload.map((entry: any, index: number) => (
-                                    <div key={index} className="flex justify-between items-center gap-4 text-sm">
-                                      <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                                        <span className="font-medium text-slate-500">{entry.name}</span>
-                                      </div>
-                                      <span className="font-bold text-slate-900">{Math.round(entry.value).toLocaleString('it-IT')} L</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                      <Legend verticalAlign="top" height={36}/>
-                      <Line 
-                        type="monotone" 
-                        dataKey="sellin" 
-                        name="Sell-In"
-                        stroke="#2563eb" 
-                        strokeWidth={4} 
-                        dot={{ r: 4, fill: '#2563eb', strokeWidth: 2, stroke: '#fff' }} 
-                        activeDot={{ r: 8 }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="sellinPY" 
-                        name="Sell-In Anno Prec."
-                        stroke="#94a3b8" 
-                        strokeWidth={2} 
-                        strokeDasharray="5 5"
-                        dot={{ r: 4, fill: '#94a3b8', strokeWidth: 2, stroke: '#fff' }} 
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="h-[300px] flex flex-col items-center justify-center text-center space-y-4">
-              <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center">
-                <X className="w-8 h-8 text-slate-400" />
-              </div>
-              <div>
-                <p className="text-slate-900 font-bold">Nessun dato disponibile</p>
-                <p className="text-slate-500 text-sm">Non abbiamo trovato dati YTD per questo PBL nell'ultimo export.</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="p-6 border-t border-slate-100 bg-white">
-          <button 
-            onClick={onClose}
-            className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-slate-800 transition-all active:scale-[0.98]"
-          >
-            Chiudi Dashboard
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  );
-};
-
 // --- Main App Component ---
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -1132,20 +137,21 @@ export default function App() {
   const [isFetchingRealTime, setIsFetchingRealTime] = useState(false);
   const [realTimeData, setRealTimeData] = useState<RealTimeData[]>([]);
   const [realTimePlant, setRealTimePlant] = useState<Installation | null>(null);
+  const [realTimeError, setRealTimeError] = useState<string | null>(null);
 
   const fetchRealTimeData = async (plant: Installation) => {
     setRealTimePlant(plant);
     setShowRealTimePopup(true);
     setIsFetchingRealTime(true);
     setRealTimeData([]);
+    setRealTimeError(null);
 
     try {
       const response = await fetch(GAS_SCRIPT_URL, {
         method: 'POST',
-        // Note: GAS requires no-cors for simple redirects, but many setups work with a proxy
-        // Since the user is on Cloudflare, we might need to handle CORS if not using no-cors.
-        // But for reading data, the GAS script must return a proper JSON response with CORS or we use a trick.
-        // For now, let's try a standard fetch.
+        headers: {
+          'Content-Type': 'text/plain',
+        },
         body: JSON.stringify({ action: 'read', pbl: plant.pbl }),
       });
 
@@ -1153,10 +159,10 @@ export default function App() {
       if (result.success) {
         setRealTimeData(result.data);
       } else {
-        console.error("Errore recupero dati real-time:", result.message);
+        setRealTimeError(result.message || "Errore sconosciuto dal server.");
       }
     } catch (error) {
-      console.error("Errore fetch real-time:", error);
+      setRealTimeError("Impossibile connettersi al server. Verifica la tua connessione.");
     } finally {
       setIsFetchingRealTime(false);
     }
@@ -1463,48 +469,61 @@ export default function App() {
     saveAs(blob, `Dati_MODULA_${new Date().toISOString().slice(0, 10)}.csv`);
   };
 
-  if (!isLoggedIn) return <LoginScreen onLogin={handleLogin} />;
-  
-  const provinces = [...new Set(data?.uniqueInstallations.map(i => i.province) || [])].sort();
-  const types = [...new Set(data?.uniqueInstallations.map(i => i.contract) || [])].filter(Boolean).sort();
-  const statuses = [...new Set(data?.uniqueInstallations.map(i => i.moso) || [])].filter(Boolean).sort();
-  const inspectionYears = [...new Set((data?.uniqueInstallations || []).flatMap(i => 
-    i.rows.map(r => r["Ultima Verifica Erogatore"]?.split('/').pop() || r["Ultima Verifica Erogatore"]?.split('-')[0]).filter(y => y && y.length === 4)
-  ))].sort((a, b) => b.localeCompare(a));
-
-  const filteredInstallations = data?.uniqueInstallations.filter(inst => {
-    const matchesSearch = inst.city.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          inst.pbl.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesProvince = selectedProvince === '' || inst.province === selectedProvince;
-    const matchesType = selectedType === '' || inst.contract === selectedType;
-    const matchesStatus = selectedStatus === '' || inst.moso === selectedStatus;
+  const filteredInstallations = useMemo(() => {
+    if (!data) return [];
     
-    const instYears = inst.rows.map(r => r["Ultima Verifica Erogatore"]?.split('/').pop() || r["Ultima Verifica Erogatore"]?.split('-')[0]).filter(y => y && y.length === 4);
-    const matchesYear = selectedInspectionYear === '' || instYears.includes(selectedInspectionYear);
+    const filtered = data.uniqueInstallations.filter(inst => {
+      const matchesSearch = inst.city.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           inst.pbl.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesProvince = selectedProvince === '' || inst.province === selectedProvince;
+      const matchesType = selectedType === '' || inst.contract === selectedType;
+      const matchesStatus = selectedStatus === '' || inst.moso === selectedStatus;
+      
+      const instYears = inst.rows.map(r => r["Ultima Verifica Erogatore"]?.split('/').pop() || r["Ultima Verifica Erogatore"]?.split('-')[0]).filter(y => y && y.length === 4);
+      const matchesYear = selectedInspectionYear === '' || instYears.includes(selectedInspectionYear);
 
-    return matchesSearch && matchesProvince && matchesType && matchesStatus && matchesYear;
-  }) || [];
+      return matchesSearch && matchesProvince && matchesType && matchesStatus && matchesYear;
+    });
 
-  if (sortBy === 'ebitda-desc') {
-    filteredInstallations.sort((a, b) => b.ebitda - a.ebitda);
-  } else if (sortBy === 'ebitda-asc') {
-    filteredInstallations.sort((a, b) => a.ebitda - b.ebitda);
-  } else {
-    filteredInstallations.sort((a, b) => a.city.localeCompare(b.city));
-  }
+    const sorted = [...filtered];
+    if (sortBy === 'ebitda-desc') {
+      sorted.sort((a, b) => b.ebitda - a.ebitda);
+    } else if (sortBy === 'ebitda-asc') {
+      sorted.sort((a, b) => a.ebitda - b.ebitda);
+    } else {
+      sorted.sort((a, b) => a.city.localeCompare(b.city));
+    }
+    
+    return sorted;
+  }, [data, searchQuery, selectedProvince, selectedType, selectedStatus, selectedInspectionYear, sortBy]);
 
-  const contractData = Object.entries(
+  const provinces = useMemo(() => [...new Set(data?.uniqueInstallations.map(i => i.province) || [])].sort(), [data]);
+  const types = useMemo(() => [...new Set(data?.uniqueInstallations.map(i => i.contract) || [])].filter(Boolean).sort(), [data]);
+  const statuses = useMemo(() => [...new Set(data?.uniqueInstallations.map(i => i.moso) || [])].filter(Boolean).sort(), [data]);
+  const inspectionYears = useMemo(() => [...new Set((data?.uniqueInstallations || []).flatMap(i => 
+    i.rows.map(r => r["Ultima Verifica Erogatore"]?.split('/').pop() || r["Ultima Verifica Erogatore"]?.split('-')[0]).filter(y => y && y.length === 4)
+  ))].sort((a, b) => b.localeCompare(a)), [data]);
+
+  const contractData = useMemo(() => Object.entries(
     filteredInstallations.reduce((acc, inst) => {
       const c = inst.contract || 'N/D';
       acc[c] = (acc[c] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
-  ).map(([name, value]) => ({ name, value }));
+  ).map(([name, value]) => ({ name, value })), [filteredInstallations]);
 
   const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
-  const maxEbitda = Math.max(...filteredInstallations.map(i => i.ebitda), 1);
-  const maxSell = Math.max(...filteredInstallations.map(i => i.sell), 1);
+  const maxEbitda = useMemo(() => Math.max(...filteredInstallations.map(i => i.ebitda), 1), [filteredInstallations]);
+  const maxSell = useMemo(() => Math.max(...filteredInstallations.map(i => i.sell), 1), [filteredInstallations]);
+
+  if (!isLoggedIn) {
+    return (
+      <Suspense fallback={<div className="h-screen w-screen bg-slate-100 animate-pulse" />}>
+        <LoginScreen onLogin={handleLogin} />
+      </Suspense>
+    );
+  }
 
   return (
     <div className="h-screen bg-slate-50 flex flex-col overflow-hidden liquid-bg">
@@ -1917,10 +936,6 @@ export default function App() {
             key="detail-modal"
             installation={selectedInstallation} 
             onClose={() => setSelectedInstallation(null)}
-            chart1Image={chart1Image}
-            chart2Image={chart2Image}
-            chart1Ref={chart1Ref}
-            chart2Ref={chart2Ref}
           />
         )}
         {showRealTimePopup && (
@@ -1929,6 +944,7 @@ export default function App() {
             plant={realTimePlant}
             data={realTimeData}
             loading={isFetchingRealTime}
+            error={realTimeError}
             onClose={() => setShowRealTimePopup(false)}
           />
         )}
@@ -2006,20 +1022,20 @@ export default function App() {
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={filteredInstallations} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis 
-                          dataKey="city" 
+                        <XAxis
+                          dataKey="city"
                           hide={filteredInstallations.length > 15}
                           fontSize={11}
                           fontWeight="bold"
                           tick={{ fill: '#94a3b8' }}
                         />
-                        <YAxis 
+                        <YAxis
                           fontSize={11}
                           fontWeight="bold"
                           tick={{ fill: '#94a3b8' }}
                           tickFormatter={(value) => `${(value / 1000).toLocaleString('it-IT', { maximumFractionDigits: 0 })}k`}
                         />
-                        <ReTooltip 
+                        <ReTooltip
                           content={({ active, payload, label }) => {
                             if (active && payload && payload.length) {
                               return (
@@ -2033,7 +1049,7 @@ export default function App() {
                                           <span className="font-medium text-slate-500">{entry.name === 'ebitda' ? 'EBITDA' : 'SELL_IN'}</span>
                                         </div>
                                         <span className={cn("font-bold", entry.name === 'ebitda' && entry.value < 0 ? "text-red-600" : "text-slate-900")}>
-                                          {entry.name === 'ebitda' 
+                                          {entry.name === 'ebitda'
                                             ? entry.value.toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
                                             : `${Math.round(entry.value).toLocaleString('it-IT')} L`}
                                         </span>
@@ -2046,18 +1062,18 @@ export default function App() {
                             return null;
                           }}
                         />
-                        <Legend 
-                          iconType="circle" 
-                          wrapperStyle={{ fontSize: '12px', fontWeight: '500' }} 
+                        <Legend
+                          iconType="circle"
+                          wrapperStyle={{ fontSize: '12px', fontWeight: '500' }}
                           formatter={(value) => <span className="text-slate-700 ml-1">{value.toUpperCase()}</span>}
                         />
                         <Line 
-                          type="monotone" 
+                          type="monotone"
                           dataKey="ebitda" 
                           stroke="#10b981" 
                           strokeWidth={3} 
-                          dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} 
-                          activeDot={{ r: 8, strokeWidth: 2, stroke: '#fff' }}
+                          dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' } as any} 
+                          activeDot={{ r: 8, strokeWidth: 2, stroke: '#fff' } as any}
                           name="ebitda"
                           animationDuration={1500}
                           animationEasing="ease-in-out"
@@ -2067,8 +1083,8 @@ export default function App() {
                           dataKey="sell" 
                           stroke="#3b82f6" 
                           strokeWidth={3} 
-                          dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} 
-                          activeDot={{ r: 8, strokeWidth: 2, stroke: '#fff' }}
+                          dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' } as any} 
+                          activeDot={{ r: 8, strokeWidth: 2, stroke: '#fff' } as any}
                           name="sell_in"
                           animationDuration={1500}
                           animationEasing="ease-in-out"

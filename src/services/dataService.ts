@@ -3,8 +3,18 @@ import { Installation, InstallationRow } from '../types';
 
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSGAIOTTCMyL8dewD_W3nKSr0HgJbqEYffhgMOA6HSwGXevQBi87KLTxpVLdg9bSw/pub?output=csv";
 
-export async function fetchInstallations(): Promise<{ allRows: InstallationRow[], uniqueInstallations: Installation[] }> {
-  const response = await fetch(`${CSV_URL}&t=${Date.now()}`);
+// Simple in-memory cache
+let cachedData: { allRows: InstallationRow[], uniqueInstallations: Installation[] } | null = null;
+let lastFetchTime = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+export async function fetchInstallations(forceRefresh = false): Promise<{ allRows: InstallationRow[], uniqueInstallations: Installation[] }> {
+  const now = Date.now();
+  if (!forceRefresh && cachedData && (now - lastFetchTime < CACHE_DURATION)) {
+    return cachedData;
+  }
+
+  const response = await fetch(`${CSV_URL}&t=${now}`);
   const text = await response.text();
 
   return new Promise((resolve, reject) => {
@@ -43,7 +53,9 @@ export async function fetchInstallations(): Promise<{ allRows: InstallationRow[]
           };
         });
 
-        resolve({ allRows, uniqueInstallations });
+        cachedData = { allRows, uniqueInstallations };
+        lastFetchTime = now;
+        resolve(cachedData);
       },
       error: (error: any) => reject(error)
     });
