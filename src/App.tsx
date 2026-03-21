@@ -539,9 +539,9 @@ export default function App() {
           </linearGradient>
         </defs>
       </svg>
-      <header className="glass-morphism sticky top-0 z-[2000] px-6 py-4 flex flex-col gap-4 shadow-2xl shadow-slate-200/20">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <header className="glass-morphism sticky top-0 z-[2000] px-4 xl:px-6 py-3 flex flex-col gap-3 shadow-xl shadow-slate-200/20">
+        <div className="flex flex-wrap lg:flex-nowrap items-center justify-between gap-4 w-full">
+          <div className="flex items-center gap-3 shrink-0">
             <motion.div 
               whileHover={{ scale: 1.05, rotate: 5 }}
               className="w-10 h-10 vivid-gradient rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30"
@@ -556,72 +556,9 @@ export default function App() {
               </div>
             </div>
           </div>
-          
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setView('converter')}
-              disabled={loading}
-              className={cn(
-                "px-4 py-2 rounded-xl transition-all flex items-center gap-2 font-bold text-sm active:shadow-none active:translate-y-1",
-                view === 'converter' ? "bg-amber-500 text-white shadow-[0_4px_0_0_#d97706]" : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 shadow-[0_4px_0_0_#cbd5e1]",
-                loading && "opacity-50 cursor-not-allowed"
-              )}
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span className="hidden sm:inline">Convertitore</span>
-            </button>
 
-            <div className="flex bg-white/50 p-1 rounded-xl border border-white/50 shadow-sm">
-              <button
-                onClick={() => setView('map')}
-                disabled={loading}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 active:shadow-none active:translate-y-1",
-                  view === 'map' ? "bg-white text-blue-600 shadow-[0_4px_0_0_#cbd5e1]" : "text-slate-500 hover:text-slate-700 hover:bg-white/50 shadow-[0_4px_0_0_transparent]",
-                  loading && "opacity-50 cursor-not-allowed"
-                )}
-              >
-                <MapIcon className="w-4 h-4" />
-                <span className="hidden sm:inline">Mappa</span>
-              </button>
-              <button
-                onClick={() => setView('list')}
-                disabled={loading}
-                className={cn(
-                  "px-3 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 active:shadow-none active:translate-y-1",
-                  view === 'list' ? "bg-white text-blue-600 shadow-[0_4px_0_0_#cbd5e1]" : "text-slate-500 hover:text-slate-700 hover:bg-white/50 shadow-[0_4px_0_0_transparent]",
-                  loading && "opacity-50 cursor-not-allowed"
-                )}
-              >
-                <List className="w-4 h-4" />
-                <span className="hidden sm:inline">Lista</span>
-              </button>
-            </div>
-            
-            <button 
-              onClick={() => setShowDashboard(!showDashboard)}
-              disabled={loading}
-              className={cn(
-                "px-4 py-2 rounded-xl transition-all flex items-center gap-2 font-bold text-sm active:shadow-none active:translate-y-1",
-                showDashboard ? "bg-blue-600 text-white shadow-[0_4px_0_0_#2563eb]" : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 shadow-[0_4px_0_0_#cbd5e1]",
-                loading && "opacity-50 cursor-not-allowed"
-              )}
-            >
-              <PieChart className="w-4 h-4" />
-              <span className="hidden sm:inline">Dashboard</span>
-            </button>
-            <div className="w-[1px] h-6 bg-slate-200 mx-1"></div>
-            <button 
-              onClick={handleLogout}
-              className="p-2 bg-white text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all border border-slate-200 shadow-[0_4px_0_0_#cbd5e1] active:shadow-none active:translate-y-1 flex items-center justify-center gap-1"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Filters Bar */}
-        <div className="flex items-center gap-2 md:gap-3 relative z-[4000] w-full max-w-full lg:flex-nowrap flex-wrap md:flex-nowrap">
+          {/* Filters Bar */}
+          <div className="flex items-center gap-2 relative z-[4000] flex-1 lg:justify-center overflow-visible w-full max-w-full lg:w-auto">
           {loading ? (
             <>
               <Skeleton className="flex-1 min-w-[200px] h-[42px] rounded-xl" />
@@ -715,6 +652,69 @@ export default function App() {
               </button>
             </>
           )}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setView('converter')}
+              disabled={loading}
+              className={cn(
+                "px-3 py-2 rounded-xl transition-all flex items-center gap-2 font-bold text-xs active:shadow-none active:translate-y-1",
+                view === 'converter' ? "bg-amber-500 text-white shadow-[0_4px_0_0_#d97706]" : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 shadow-[0_4px_0_0_#cbd5e1]",
+                loading && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span className="hidden sm:inline">Convertitore</span>
+            </button>
+
+            <div className="flex bg-white/50 p-1 rounded-xl border border-white/50 shadow-sm hidden sm:flex">
+              <button
+                onClick={() => setView('map')}
+                disabled={loading}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 active:shadow-none active:translate-y-1",
+                  view === 'map' ? "bg-white text-blue-600 shadow-[0_4px_0_0_#cbd5e1]" : "text-slate-500 hover:text-slate-700 hover:bg-white/50 shadow-[0_4px_0_0_transparent]",
+                  loading && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <MapIcon className="w-3.5 h-3.5" />
+                Map
+              </button>
+              <button
+                onClick={() => setView('list')}
+                disabled={loading}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 active:shadow-none active:translate-y-1",
+                  view === 'list' ? "bg-white text-blue-600 shadow-[0_4px_0_0_#cbd5e1]" : "text-slate-500 hover:text-slate-700 hover:bg-white/50 shadow-[0_4px_0_0_transparent]",
+                  loading && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <List className="w-3.5 h-3.5" />
+                List
+              </button>
+            </div>
+            
+            <button 
+              onClick={() => setShowDashboard(!showDashboard)}
+              disabled={loading}
+              className={cn(
+                "px-3 py-2 rounded-xl transition-all flex items-center gap-2 font-bold text-xs active:shadow-none active:translate-y-1",
+                showDashboard ? "bg-blue-600 text-white shadow-[0_4px_0_0_#2563eb]" : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 shadow-[0_4px_0_0_#cbd5e1]",
+                loading && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              <PieChart className="w-4 h-4" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </button>
+            <div className="w-[1px] h-5 bg-slate-200 mx-0.5"></div>
+            <button 
+              onClick={handleLogout}
+              className="p-2 bg-white text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all border border-slate-200 shadow-[0_4px_0_0_#cbd5e1] active:shadow-none active:translate-y-1 flex items-center justify-center gap-1"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         <AnimatePresence>
