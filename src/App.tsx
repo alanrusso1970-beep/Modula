@@ -739,8 +739,9 @@ export default function App() {
       </header>
 
       <main className="flex-1 relative overflow-hidden">
-        <AnimatePresence mode="wait">
-          {loading ? (
+        <Suspense fallback={<div className="p-8"><Skeleton className="w-full h-full rounded-2xl" /></div>}>
+          <AnimatePresence mode="wait">
+            {loading ? (
             <motion.div 
               key="loading-skeleton"
               initial={{ opacity: 0 }}
@@ -921,31 +922,36 @@ export default function App() {
                 </div>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>
+        </Suspense>
       </main>
 
       <AnimatePresence>
         {selectedInstallation && (
-          <DetailModal 
-            key="detail-modal"
-            installation={selectedInstallation} 
-            onClose={() => setSelectedInstallation(null)}
-            onOpenRealTimeDashboard={(plant) => {
-              setSelectedInstallation(null);
-              fetchRealTimeData(plant);
-            }}
-          />
+          <Suspense fallback={null}>
+            <DetailModal 
+              key="detail-modal"
+              installation={selectedInstallation} 
+              onClose={() => setSelectedInstallation(null)}
+              onOpenRealTimeDashboard={(plant) => {
+                setSelectedInstallation(null);
+                fetchRealTimeData(plant);
+              }}
+            />
+          </Suspense>
         )}
         {showRealTimePopup && (
-          <RealTimeDashboardModal
-            key="realtime-modal"
-            plant={realTimePlant}
-            data={realTimeData}
-            loading={isFetchingRealTime}
-            error={realTimeError}
-            onClose={() => setShowRealTimePopup(false)}
-          />
+          <Suspense fallback={null}>
+            <RealTimeDashboardModal
+              key="realtime-modal"
+              plant={realTimePlant}
+              data={realTimeData}
+              loading={isFetchingRealTime}
+              error={realTimeError}
+              onClose={() => setShowRealTimePopup(false)}
+            />
+          </Suspense>
         )}
         <div key="dashboard-modal" className={cn("fixed inset-0 z-[3000] flex items-center justify-center p-4 transition-all duration-300", showDashboard ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none")}>
           <div 
