@@ -102,6 +102,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProvince, setSelectedProvince] = useState('');
+  const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedInspectionYear, setSelectedInspectionYear] = useState('');
@@ -476,13 +477,14 @@ export default function App() {
       const matchesSearch = inst.city.toLowerCase().includes(searchQuery.toLowerCase()) || 
                            inst.pbl.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesProvince = selectedProvince === '' || inst.province === selectedProvince;
+      const matchesRegion = selectedRegion === '' || inst.region === selectedRegion;
       const matchesType = selectedType === '' || inst.contract === selectedType;
       const matchesStatus = selectedStatus === '' || inst.moso === selectedStatus;
       
       const instYears = inst.rows.map(r => r["Ultima Verifica Erogatore"]?.split('/').pop() || r["Ultima Verifica Erogatore"]?.split('-')[0]).filter(y => y && y.length === 4);
       const matchesYear = selectedInspectionYear === '' || instYears.includes(selectedInspectionYear);
 
-      return matchesSearch && matchesProvince && matchesType && matchesStatus && matchesYear;
+      return matchesSearch && matchesProvince && matchesRegion && matchesType && matchesStatus && matchesYear;
     });
 
     const sorted = [...filtered];
@@ -495,9 +497,10 @@ export default function App() {
     }
     
     return sorted;
-  }, [data, searchQuery, selectedProvince, selectedType, selectedStatus, selectedInspectionYear, sortBy]);
+  }, [data, searchQuery, selectedProvince, selectedRegion, selectedType, selectedStatus, selectedInspectionYear, sortBy]);
 
   const provinces = useMemo(() => [...new Set(data?.uniqueInstallations.map(i => i.province) || [])].sort(), [data]);
+  const regions = useMemo(() => [...new Set(data?.uniqueInstallations.map(i => i.region) || [])].filter(Boolean).sort(), [data]);
   const types = useMemo(() => [...new Set(data?.uniqueInstallations.map(i => i.contract) || [])].filter(Boolean).sort(), [data]);
   const statuses = useMemo(() => [...new Set(data?.uniqueInstallations.map(i => i.moso) || [])].filter(Boolean).sort(), [data]);
   const inspectionYears = useMemo(() => [...new Set((data?.uniqueInstallations || []).flatMap(i => 
@@ -618,7 +621,7 @@ export default function App() {
         </div>
 
         {/* Filters Bar */}
-        <div className="flex flex-wrap items-center gap-3 relative z-[4000]">
+        <div className="flex items-center gap-3 relative z-[4000] overflow-x-auto pb-1 hide-scrollbar">
           {loading ? (
             <>
               <Skeleton className="flex-1 min-w-[200px] h-[42px] rounded-xl" />
@@ -640,7 +643,7 @@ export default function App() {
                 />
               </div>
               
-              <div className="w-[180px]">
+              <div className="w-[180px] shrink-0">
                 <SearchableSelect
                   options={provinces}
                   value={selectedProvince}
@@ -651,7 +654,18 @@ export default function App() {
                 />
               </div>
 
-              <div className="w-[180px]">
+              <div className="w-[180px] shrink-0">
+                <SearchableSelect
+                  options={regions}
+                  value={selectedRegion}
+                  onChange={setSelectedRegion}
+                  placeholder="Regione"
+                  className="w-full"
+                  compact
+                />
+              </div>
+
+              <div className="w-[180px] shrink-0">
                 <SearchableSelect
                   options={[
                     "A-Z",
@@ -689,6 +703,7 @@ export default function App() {
                 onClick={() => {
                   setSearchQuery('');
                   setSelectedProvince('');
+                  setSelectedRegion('');
                   setSelectedType('');
                   setSelectedStatus('');
                   setSelectedInspectionYear('');

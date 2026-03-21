@@ -312,7 +312,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
                     <div className="lg:col-span-1 space-y-4">
                       {performanceStats.map((item) => {
                         const hash = item.name.charCodeAt(0) + installation.pbl.charCodeAt(0) + (Math.abs(installation.ebitda % 100));
-                        const trendValue = (hash % 15) + (hash % 10) / 10;
+                        const trendValue = ((hash % 15) + (hash % 10) / 10).toFixed(2);
                         const isPositive = hash % 2 === 0;
                         return (
                           <div key={item.name} className="bg-slate-50 p-5 rounded-xl border border-slate-200 relative overflow-hidden group">
@@ -391,14 +391,17 @@ const DetailModal: React.FC<DetailModalProps> = ({
                     </h4>
                        <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
                           <MapIcon className="w-4 h-4 text-emerald-600" />
-                          <a 
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${installation.address}, ${installation.cap} ${installation.city} ${installation.province} ${installation.region}`)}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="text-sm font-bold text-emerald-600 hover:underline"
-                          >
-                            Apri in Google Maps
-                          </a>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-slate-800">{installation.city} - {installation.province}</span>
+                            <a 
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${installation.address}, ${installation.cap} ${installation.city} ${installation.province} ${installation.region}`)}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="text-xs font-bold text-emerald-600 hover:underline mt-0.5"
+                            >
+                              Apri in Google Maps
+                            </a>
+                          </div>
                        </div>
                        <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
                           <Phone className="w-4 h-4 text-blue-600" />

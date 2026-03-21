@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Monitor, X, Activity, Droplets } from 'lucide-react';
+import { Monitor, X, Activity, Droplets, Database } from 'lucide-react';
 import { 
   ResponsiveContainer, 
   CartesianGrid, 
@@ -64,6 +64,24 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
   error,
   onClose 
 }) => {
+  const [syncProgress, setSyncProgress] = React.useState(0);
+
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (loading) {
+      setSyncProgress(0);
+      interval = setInterval(() => {
+        setSyncProgress(prev => {
+          if (prev >= 95) return 95;
+          return prev + Math.floor(Math.random() * 10) + 2;
+        });
+      }, 300);
+    } else {
+      setSyncProgress(100);
+    }
+    return () => clearInterval(interval);
+  }, [loading]);
+
   // Group data by product
   const dataByProduct = data.reduce((acc, curr) => {
     const prod = curr.prodotto || 'Altro';
@@ -138,9 +156,26 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
 
         <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-50">
           {loading ? (
-            <div className="h-[400px] flex flex-col items-center justify-center gap-4">
-              <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-slate-500 font-bold animate-pulse">Sincronizzazione con Google Drive...</p>
+            <div className="h-[400px] flex flex-col items-center justify-center gap-6 max-w-sm mx-auto w-full px-6">
+              <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-2 shadow-inner border border-blue-100">
+                <Database className="w-8 h-8 text-blue-500 animate-pulse" />
+              </div>
+              <div className="w-full space-y-2">
+                <div className="flex justify-between text-[11px] font-bold text-slate-500 uppercase tracking-widest px-1">
+                  <span>Sincronizzazione Google Drive</span>
+                  <span className="text-blue-600">{syncProgress}%</span>
+                </div>
+                <div className="h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 relative overflow-hidden"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${syncProgress}%` }}
+                    transition={{ type: "tween", ease: "linear", duration: 0.3 }}
+                  >
+                    <div className="absolute top-0 bottom-0 left-0 w-20 bg-gradient-to-r from-transparent via-white/40 to-transparent -skew-x-12 animate-[shimmer_2s_infinite]" />
+                  </motion.div>
+                </div>
+              </div>
             </div>
           ) : data.length > 0 ? (
             <>
