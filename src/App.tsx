@@ -621,7 +621,7 @@ export default function App() {
         </div>
 
         {/* Filters Bar */}
-        <div className="flex items-center gap-3 relative z-[4000] overflow-x-auto pb-1 hide-scrollbar">
+        <div className="flex items-center gap-2 md:gap-3 relative z-[4000] w-full max-w-full lg:flex-nowrap flex-wrap md:flex-nowrap">
           {loading ? (
             <>
               <Skeleton className="flex-1 min-w-[200px] h-[42px] rounded-xl" />
