@@ -268,6 +268,17 @@ const DetailModal: React.FC<DetailModalProps> = ({
                       <Phone className="w-6 h-6 text-blue-600" /> Contatti
                     </h4>
                        <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
+                          <MapIcon className="w-4 h-4 text-emerald-600" />
+                          <a 
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${installation.address}, ${installation.cap} ${installation.city} ${installation.province} ${installation.region}`)}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-sm font-bold text-emerald-600 hover:underline"
+                          >
+                            Apri in Google Maps
+                          </a>
+                       </div>
+                       <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
                           <Phone className="w-4 h-4 text-blue-600" />
                           {installation.phone ? (
                             <a href={`tel:${installation.phone}`} className="text-sm font-bold text-blue-600 hover:underline">{installation.phone}</a>

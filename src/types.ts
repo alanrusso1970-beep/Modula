@@ -4,6 +4,7 @@ export interface InstallationRow {
   Provincia: string;
   Indirizzo: string;
   CAP: string;
+  Regione: string;
   EBITDA2025: string;
   Sell2025: string;
   Gestore: string;
@@ -30,6 +31,7 @@ export interface Installation {
   province: string;
   address: string;
   cap: string;
+  region: string;
   ebitda: number;
   sell: number;
   manager: string;

@@ -39,6 +39,7 @@ export async function fetchInstallations(forceRefresh = false): Promise<{ allRow
             pbl,
             city: first.Città || '',
             province: first.Provincia || '',
+            region: first.Regione || '',
             address: first.Indirizzo || '',
             cap: first.CAP || '',
             ebitda: parseFloat(first.EBITDA2025?.replace(/\s/g, '').replace('€', '').replace(/\./g, '').replace(',', '.') || '0') || 0,
