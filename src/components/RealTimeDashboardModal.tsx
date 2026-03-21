@@ -1,17 +1,42 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Monitor, X } from 'lucide-react';
+import { Monitor, X, Activity, Droplets } from 'lucide-react';
 import { 
   ResponsiveContainer, 
-  LineChart, 
   CartesianGrid, 
   XAxis, 
   YAxis, 
   Tooltip as ReTooltip, 
   Legend, 
-  Line 
+  BarChart,
+  Bar,
+  AreaChart,
+  Area,
+  Line
 } from 'recharts';
 import { Installation, RealTimeData } from '../types';
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-xl border border-slate-100 min-w-[200px]">
+        <p className="font-bold text-slate-800 mb-3 ml-1">{label}</p>
+        <div className="space-y-2">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex justify-between items-center gap-4 text-sm bg-slate-50 p-2 rounded-lg">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: entry.color }} />
+                <span className="font-bold text-slate-600">{entry.name}</span>
+              </div>
+              <span className="font-black text-slate-900">{Math.round(entry.value).toLocaleString('it-IT')} L</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
 interface RealTimeDashboardModalProps {
   plant: Installation | null;
@@ -52,6 +77,17 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
   const servitoPercentage = totalSellin + totalServito > 0 
     ? (totalServito / (totalSellin + totalServito)) * 100 
     : 0;
+
+  // Calculate total by month for unified chart
+  const months = [...new Set(data.map(d => d.mese))].sort();
+  const totalDataByMonth = months.map(mese => {
+    const monthData = data.filter(d => d.mese === mese);
+    return {
+      mese,
+      sellin: monthData.reduce((acc, curr) => acc + curr.sellin, 0),
+      sellinPY: monthData.reduce((acc, curr) => acc + curr.sellinPY, 0)
+    };
+  });
 
   if (!plant) return null;
 
@@ -98,23 +134,55 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
           ) : data.length > 0 ? (
             <>
               {/* Summary Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm shadow-blue-500/5">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Totale Sell-In (P)</p>
-                  <p className="text-2xl font-black text-blue-600 font-mono">{Math.round(totalSellin).toLocaleString('it-IT')} L</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-3xl shadow-lg shadow-blue-500/30 text-white relative overflow-hidden group border border-blue-400/50">
+                  <div className="absolute -top-4 -right-4 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500"><Activity className="w-32 h-32" /></div>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-blue-100 mb-2 relative z-10">Totale Sell-In (P)</p>
+                  <p className="text-4xl md:text-5xl font-black font-mono tracking-tight relative z-10 drop-shadow-sm">{Math.round(totalSellin).toLocaleString('it-IT')}</p>
+                  <p className="text-sm font-medium text-blue-100 mt-2 relative z-10">Litri · Anno in corso</p>
                 </div>
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm shadow-indigo-500/5">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Totale Servito (R)</p>
-                  <p className="text-2xl font-black text-indigo-600 font-mono">{Math.round(totalServito).toLocaleString('it-IT')} L</p>
+                <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-6 rounded-3xl shadow-lg shadow-indigo-500/30 text-white relative overflow-hidden group border border-indigo-400/50">
+                  <div className="absolute -top-4 -right-4 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500"><Droplets className="w-32 h-32" /></div>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-indigo-100 mb-2 relative z-10">Totale Servito (R)</p>
+                  <p className="text-4xl md:text-5xl font-black font-mono tracking-tight relative z-10 drop-shadow-sm">{Math.round(totalServito).toLocaleString('it-IT')}</p>
+                  <p className="text-sm font-medium text-indigo-100 mt-2 relative z-10">Litri · Anno in corso</p>
                 </div>
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm shadow-emerald-500/5">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">% Servito (R/(P+R))</p>
-                  <div className="flex items-baseline gap-2">
-                    <p className="text-2xl font-black text-emerald-600 font-mono">
+                <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 rounded-3xl shadow-lg shadow-emerald-500/30 text-white relative overflow-hidden group border border-emerald-400/50">
+                  <div className="absolute -top-4 -right-4 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500"><Activity className="w-32 h-32" /></div>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-100 mb-2 relative z-10">% Servito (R / P+R)</p>
+                  <div className="flex items-baseline gap-2 relative z-10 drop-shadow-sm">
+                    <p className="text-4xl md:text-5xl font-black font-mono tracking-tight">
                       {servitoPercentage.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
                     </p>
-                    <span className="text-[10px] font-bold text-slate-400">YTD</span>
+                    <span className="text-sm font-bold text-emerald-200">YTD</span>
                   </div>
+                  <p className="text-sm font-medium text-emerald-100 mt-2 relative z-10">Incidenza globale</p>
+                </div>
+              </div>
+
+              {/* Total Unified Chart */}
+              <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm mb-10 overflow-hidden">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-12 h-12 vivid-gradient rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+                    <Activity className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-black text-slate-900 tracking-tight">Volume Globale (Tutti i Prodotti)</h4>
+                    <p className="text-sm font-medium text-slate-500 mt-0.5">Storicizzazione Mensile: Anno in Corso contro Anno Precedente</p>
+                  </div>
+                </div>
+                <div className="h-[400px] w-full mt-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={totalDataByMonth} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis dataKey="mese" fontSize={11} fontWeight="bold" tick={{ fill: '#64748b' }} axisLine={false} tickLine={false} dy={10} />
+                      <YAxis fontSize={11} fontWeight="bold" tick={{ fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(value) => `${(value / 1000).toLocaleString('it-IT')}k`} dx={-10} />
+                      <ReTooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
+                      <Legend verticalAlign="top" height={50} iconType="circle" wrapperStyle={{ fontSize: '13px', fontWeight: 'bold', borderBottom: '1px solid #e2e8f0', paddingBottom: '20px' }} />
+                      <Bar dataKey="sellin" name="Totale Anno Corrente" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={32} />
+                      <Bar dataKey="sellinPY" name="Totale Anno Precedente" fill="#94a3b8" radius={[6, 6, 0, 0]} barSize={32} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
 
@@ -130,65 +198,57 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
                       {/* VENDOR PERFORMANCE Removed and Chart Legend moved to recharts */}
                     </div>
                     
-                    <div className="h-[300px] w-full">
+                    <div className="h-[320px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={dataByProduct[productName]} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                        <AreaChart data={dataByProduct[productName]} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id={`color${productName.replace(/\s/g, '')}`} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor={getProductColor(productName)} stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor={getProductColor(productName)} stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                           <XAxis 
                             dataKey="mese" 
                             fontSize={11}
                             fontWeight="bold"
                             tick={{ fill: '#94a3b8' }}
+                            axisLine={false}
+                            tickLine={false}
+                            dy={10}
                           />
                           <YAxis 
                             fontSize={11}
                             fontWeight="bold"
                             tick={{ fill: '#94a3b8' }}
+                            axisLine={false}
+                            tickLine={false}
                             tickFormatter={(value) => `${(value / 1000).toLocaleString('it-IT')}k`}
+                            dx={-10}
                           />
-                          <ReTooltip 
-                            content={({ active, payload, label }) => {
-                              if (active && payload && payload.length) {
-                                return (
-                                  <div className="bg-white p-4 rounded-xl shadow-lg border border-slate-200 min-w-[180px]">
-                                    <p className="font-bold text-slate-700 mb-2 border-b border-slate-100 pb-2">{label}</p>
-                                    <div className="space-y-2">
-                                      {payload.map((entry: any, index: number) => (
-                                        <div key={index} className="flex justify-between items-center gap-4 text-sm">
-                                          <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                                            <span className="font-medium text-slate-500">{entry.name}</span>
-                                          </div>
-                                          <span className="font-bold text-slate-900">{Math.round(entry.value).toLocaleString('it-IT')} L</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                );
-                              }
-                              return null;
-                            }}
-                          />
-                          <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ paddingLeft: '20px' }} />
-                          <Line 
+                          <ReTooltip content={<CustomTooltip />} />
+                          <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '13px', fontWeight: 'bold' }} />
+                          <Area 
                             type="monotone" 
                             dataKey="sellin" 
-                            name="Sell-In (Corrente)"
+                            name="Corrente"
                             stroke={getProductColor(productName)} 
+                            fillOpacity={1} 
+                            fill={`url(#color${productName.replace(/\s/g, '')})`} 
                             strokeWidth={4} 
-                            dot={{ r: 4, fill: getProductColor(productName), strokeWidth: 2, stroke: '#fff' }} 
-                            activeDot={{ r: 8 }}
+                            activeDot={{ r: 8, fill: getProductColor(productName), stroke: '#fff', strokeWidth: 2 }}
                           />
                           <Line 
                             type="monotone" 
                             dataKey="sellinPY" 
-                            name="Sell-In (Anno Prec.)"
-                            stroke="#94a3b8" 
-                            strokeWidth={2} 
+                            name="Precedente"
+                            stroke="#cbd5e1" 
+                            strokeWidth={3} 
                             strokeDasharray="5 5"
-                            dot={{ r: 4, fill: '#94a3b8', strokeWidth: 2, stroke: '#fff' }} 
+                            dot={false}
+                            activeDot={{ r: 6, fill: '#cbd5e1' }} 
                           />
-                        </LineChart>
+                        </AreaChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
