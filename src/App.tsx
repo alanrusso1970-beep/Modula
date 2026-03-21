@@ -29,7 +29,6 @@ import {
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import Papa from 'papaparse';
-import domtoimage from 'dom-to-image-more';
 import { fetchInstallations } from './services/dataService';
 import { Installation, InstallationRow, RealTimeData } from './types';
 import { cn } from './lib/utils';
@@ -109,26 +108,6 @@ export default function App() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [sortBy, setSortBy] = useState<'city' | 'ebitda-desc' | 'ebitda-asc'>('city');
   const [selectedInstallation, setSelectedInstallation] = useState<Installation | null>(null);
-  const chart1Ref = useRef<HTMLDivElement>(null);
-  const chart2Ref = useRef<HTMLDivElement>(null);
-  const [chart1Image, setChart1Image] = useState<string | null>(null);
-  const [chart2Image, setChart2Image] = useState<string | null>(null);
-
-  const handleDownloadPDF = async () => {
-    // Capture charts
-    try {
-      if (chart1Ref.current) {
-        const dataUrl1 = await domtoimage.toPng(chart1Ref.current, { bgcolor: '#ffffff' });
-        setChart1Image(dataUrl1);
-      }
-      if (chart2Ref.current) {
-        const dataUrl2 = await domtoimage.toPng(chart2Ref.current, { bgcolor: '#ffffff' });
-        setChart2Image(dataUrl2);
-      }
-    } catch (e) {
-      console.error('Error capturing charts', e);
-    }
-  };
   const [showDashboard, setShowDashboard] = useState(false);
   const [geocodingStatus, setGeocodingStatus] = useState<{ current: number, total: number } | null>(null);
   const [activePieIndex, setActivePieIndex] = useState(0);
@@ -1001,7 +980,7 @@ export default function App() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-4">
                   <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Distribuzione Contratti</h4>
-                  <div ref={chart1Ref} className="h-[350px] w-full bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm">
+                  <div className="h-[350px] w-full bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm">
                     <ResponsiveContainer width="100%" height="100%">
                       <RePieChart>
                         <AnyPie
@@ -1038,7 +1017,7 @@ export default function App() {
 
                 <div className="space-y-4">
                   <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Trend EBITDA & SELL_IN</h4>
-                  <div ref={chart2Ref} className="h-[350px] w-full bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm">
+                  <div className="h-[350px] w-full bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={filteredInstallations} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />

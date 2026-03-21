@@ -15,6 +15,23 @@ export default defineConfig(({mode}) => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: (id) => {
+            if (id.includes('node_modules')) {
+              if (id.includes('react') || id.includes('react-dom')) return 'vendor-react';
+              if (id.includes('leaflet') || id.includes('react-leaflet')) return 'vendor-leaflet';
+              if (id.includes('framer-motion')) return 'vendor-motion';
+              if (id.includes('recharts') || id.includes('d3')) return 'vendor-recharts';
+              if (id.includes('xlsx')) return 'vendor-xlsx';
+              if (id.includes('@react-pdf')) return 'vendor-pdf';
+              return 'vendor-others';
+            }
+          }
+        }
+      }
+    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.

@@ -42,7 +42,6 @@ const MapView: React.FC<MapViewProps> = ({
   geocodingStatus 
 }) => {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [mapSearch, setMapSearch] = useState('');
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -58,30 +57,23 @@ const MapView: React.FC<MapViewProps> = ({
     }
   }, []);
 
-  // Filter installations based on map search
-  const filteredMapInstallations = installations.filter(inst => 
-    inst.city.toLowerCase().includes(mapSearch.toLowerCase()) || 
-    inst.province.toLowerCase().includes(mapSearch.toLowerCase()) ||
-    inst.pbl.toLowerCase().includes(mapSearch.toLowerCase())
-  );
-
   // Calculate the center
   let initialCenter: [number, number] = [41.9028, 12.4964]; // Default to Rome
   let initialZoom = 6;
 
-  const installationsWithCoords = filteredMapInstallations.filter(inst => inst.lat && inst.lng);
+  const installationsWithCoords = installations.filter(inst => inst.lat && inst.lng);
   if (installationsWithCoords.length > 0) {
     const avgLat = installationsWithCoords.reduce((sum, inst) => sum + (inst.lat || 0), 0) / installationsWithCoords.length;
     const avgLng = installationsWithCoords.reduce((sum, inst) => sum + (inst.lng || 0), 0) / installationsWithCoords.length;
     initialCenter = [avgLat, avgLng];
-    initialZoom = mapSearch ? 10 : (installationsWithCoords.length < 5 ? 9 : 7);
+    initialZoom = installationsWithCoords.length < 5 ? 9 : 7;
   } else if (userLocation) {
     initialCenter = [userLocation.lat, userLocation.lng];
     initialZoom = 10;
   }
 
   // Group installations by province for the map
-  const provinceGroups = filteredMapInstallations.reduce((acc, inst) => {
+  const provinceGroups = installations.reduce((acc, inst) => {
     if (inst.lat && inst.lng) {
       const key = inst.province;
       if (!acc[key]) {
@@ -176,19 +168,6 @@ const MapView: React.FC<MapViewProps> = ({
             </div>
           )}
         </motion.div>
-      </div>
-
-      {/* Search Input on Map */}
-      <div className="absolute top-6 left-6 right-6 sm:left-auto sm:right-6 sm:w-80 z-[1000]">
-        <div className="relative group">
-          <input 
-            type="text" 
-            placeholder="Cerca città o PBL..."
-            value={mapSearch}
-            onChange={(e) => setMapSearch(e.target.value)}
-            className="w-full bg-white/90 backdrop-blur-md border border-slate-200 px-6 py-4 rounded-2xl text-slate-900 font-bold shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
-          />
-        </div>
       </div>
 
       <div className="absolute bottom-6 right-6 z-[1000] flex flex-col gap-3">
