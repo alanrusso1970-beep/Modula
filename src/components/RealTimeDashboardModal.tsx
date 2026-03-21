@@ -16,11 +16,22 @@ import {
 } from 'recharts';
 import { Installation, RealTimeData } from '../types';
 
+const MONTH_NAMES = [
+  'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+];
+
+const formatMonth = (month: number | string) => {
+  const m = Number(month);
+  if (isNaN(m) || m < 1 || m > 12) return String(month);
+  return MONTH_NAMES[m - 1];
+};
+
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-xl border border-slate-100 min-w-[200px]">
-        <p className="font-bold text-slate-800 mb-3 ml-1">{label}</p>
+        <p className="font-bold text-slate-800 mb-3 ml-1">{formatMonth(label)}</p>
         <div className="space-y-2">
           {payload.map((entry: any, index: number) => (
             <div key={index} className="flex justify-between items-center gap-4 text-sm bg-slate-50 p-2 rounded-lg">
@@ -175,7 +186,7 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={totalDataByMonth} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis dataKey="mese" fontSize={11} fontWeight="bold" tick={{ fill: '#64748b' }} axisLine={false} tickLine={false} dy={10} />
+                      <XAxis dataKey="mese" fontSize={11} fontWeight="bold" tick={{ fill: '#64748b' }} axisLine={false} tickLine={false} dy={10} tickFormatter={formatMonth} />
                       <YAxis fontSize={11} fontWeight="bold" tick={{ fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(value) => `${(value / 1000).toLocaleString('it-IT')}k`} dx={-10} />
                       <ReTooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
                       <Legend verticalAlign="top" height={50} iconType="circle" wrapperStyle={{ fontSize: '13px', fontWeight: 'bold', borderBottom: '1px solid #e2e8f0', paddingBottom: '20px' }} />
@@ -216,6 +227,7 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
                             axisLine={false}
                             tickLine={false}
                             dy={10}
+                            tickFormatter={formatMonth}
                           />
                           <YAxis 
                             fontSize={11}
