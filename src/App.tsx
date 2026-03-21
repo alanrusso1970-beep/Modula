@@ -27,16 +27,14 @@ import {
   FileDown,
   Monitor
 } from 'lucide-react';
-import { saveAs } from 'file-saver';
-import Papa from 'papaparse';
 import { fetchInstallations } from './services/dataService';
 import { Installation, InstallationRow, RealTimeData } from './types';
 import { cn } from './lib/utils';
 import { Skeleton } from './components/Skeleton';
 import { SearchableSelect } from './components/SearchableSelect';
-import { PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, Sector } from 'recharts';
+import { COLORS, provinceMap, preMapped } from './lib/constants';
+import { Sector } from 'recharts';
 
-const AnyPie = Pie as any;
 
 // Lazy load components
 const LoginScreen = lazy(() => import('./components/LoginScreen'));
@@ -44,6 +42,7 @@ const MapView = lazy(() => import('./components/MapView'));
 const DetailModal = lazy(() => import('./components/DetailModal'));
 const ExcelConverter = lazy(() => import('./components/ExcelConverter'));
 const RealTimeDashboardModal = lazy(() => import('./components/RealTimeDashboardModal'));
+const AnalyzerDashboard = lazy(() => import('./components/AnalyzerDashboard'));
 
 const GAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbykayQoMqHfvrni5p-l443HINtk1WxL4sPEExpxjB_HeTaDENMXuui58kYXzmmZXtc3/exec";
 
@@ -303,7 +302,7 @@ export default function App() {
     setIsLoggedIn(false);
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!data) return;
     
     // Calculate Summary Data
@@ -438,14 +437,17 @@ export default function App() {
       </html>
     `;
 
+    const { saveAs } = await import('file-saver');
     const blob = new Blob([htmlContent], { type: 'application/msword' });
     saveAs(blob, `Report_MODULA_${new Date().toISOString().slice(0, 10)}.doc`);
   };
 
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
     if (!data) return;
+    const Papa = (await import('papaparse')).default;
     const csv = Papa.unparse(data.allRows);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const { saveAs } = await import('file-saver');
     saveAs(blob, `Dati_MODULA_${new Date().toISOString().slice(0, 10)}.csv`);
   };
 
@@ -953,189 +955,16 @@ export default function App() {
             />
           </Suspense>
         )}
-        <div key="dashboard-modal" className={cn("fixed inset-0 z-[3000] flex items-center justify-center p-4 transition-all duration-300", showDashboard ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none")}>
-          <div 
-            className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
-            onClick={() => setShowDashboard(false)}
+        <Suspense fallback={null}>
+          <AnalyzerDashboard 
+            show={showDashboard}
+            onClose={() => setShowDashboard(false)}
+            filteredInstallations={filteredInstallations}
+            contractData={contractData}
+            activePieIndex={activePieIndex}
+            setActivePieIndex={setActivePieIndex}
           />
-          <motion.div 
-            initial={false}
-            animate={showDashboard ? { scale: 1, y: 0, opacity: 1 } : { scale: 0.95, y: 20, opacity: 0 }}
-            className="relative bg-white w-full max-w-6xl rounded-2xl shadow-2xl p-6 md:p-8 space-y-8 max-h-[90vh] overflow-y-auto border border-slate-200"
-          >
-              <div className="flex justify-between items-center pb-4 border-b border-slate-100">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-500/20">
-                    <TrendingUp className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">Dashboard Analitica</h3>
-                    <p className="text-slate-500 text-sm font-medium">Panoramica globale del network MODULA</p>
-                  </div>
-                </div>
-                <motion.button 
-                  whileHover={{ rotate: 90, scale: 1.1 }}
-                  onClick={() => setShowDashboard(false)} 
-                  className="p-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all shadow-[0_4px_0_0_#cbd5e1] active:shadow-none active:translate-y-1 flex items-center justify-center"
-                >
-                  <X className="w-6 h-6 text-slate-400 hidden" />
-                  <X className="w-5 h-5" />
-                </motion.button>
-              </div>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Distribuzione Contratti</h4>
-                  <div className="h-[350px] w-full bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RePieChart>
-                        <AnyPie
-                          activeIndex={activePieIndex}
-                          activeShape={renderActiveShape}
-                          data={contractData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={80}
-                          outerRadius={100}
-                          paddingAngle={8}
-                          dataKey="value"
-                          onMouseEnter={(_: any, index: number) => setActivePieIndex(index)}
-                        >
-                          {contractData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} className="cursor-pointer hover:opacity-80 transition-opacity" />
-                          ))}
-                        </AnyPie>
-                        <ReTooltip 
-                          contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', padding: '12px', fontSize: '12px' }}
-                          itemStyle={{ fontWeight: 'bold' }}
-                        />
-                        <Legend 
-                          verticalAlign="bottom" 
-                          height={36} 
-                          iconType="circle" 
-                          wrapperStyle={{ fontSize: '12px', fontWeight: '500' }} 
-                          formatter={(value) => <span className="text-slate-700 ml-1">{value}</span>}
-                        />
-                      </RePieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Trend EBITDA & SELL_IN</h4>
-                  <div className="h-[350px] w-full bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-sm">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={filteredInstallations} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis
-                          dataKey="city"
-                          hide={filteredInstallations.length > 15}
-                          fontSize={11}
-                          fontWeight="bold"
-                          tick={{ fill: '#94a3b8' }}
-                        />
-                        <YAxis
-                          fontSize={11}
-                          fontWeight="bold"
-                          tick={{ fill: '#94a3b8' }}
-                          tickFormatter={(value) => `${(value / 1000).toLocaleString('it-IT', { maximumFractionDigits: 0 })}k`}
-                        />
-                        <ReTooltip
-                          content={({ active, payload, label }) => {
-                            if (active && payload && payload.length) {
-                              return (
-                                <div className="bg-white p-4 rounded-xl shadow-lg border border-slate-200 min-w-[200px]">
-                                  <p className="font-bold text-slate-700 mb-3 border-b border-slate-100 pb-2">{label}</p>
-                                  <div className="space-y-2">
-                                    {payload.map((entry: any, index: number) => (
-                                      <div key={`${entry.name}-${index}`} className="flex justify-between items-center gap-4 text-sm">
-                                        <div className="flex items-center gap-2">
-                                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                                          <span className="font-medium text-slate-500">{entry.name === 'ebitda' ? 'EBITDA' : 'SELL_IN'}</span>
-                                        </div>
-                                        <span className={cn("font-bold", entry.name === 'ebitda' && entry.value < 0 ? "text-red-600" : "text-slate-900")}>
-                                          {entry.name === 'ebitda'
-                                            ? entry.value.toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
-                                            : `${Math.round(entry.value).toLocaleString('it-IT')} L`}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <Legend
-                          iconType="circle"
-                          wrapperStyle={{ fontSize: '12px', fontWeight: '500' }}
-                          formatter={(value) => <span className="text-slate-700 ml-1">{value.toUpperCase()}</span>}
-                        />
-                        <Line 
-                          type="monotone"
-                          dataKey="ebitda" 
-                          stroke="#10b981" 
-                          strokeWidth={3} 
-                          dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' } as any} 
-                          activeDot={{ r: 8, strokeWidth: 2, stroke: '#fff' } as any}
-                          name="ebitda"
-                          animationDuration={1500}
-                          animationEasing="ease-in-out"
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="sell" 
-                          stroke="#3b82f6" 
-                          strokeWidth={3} 
-                          dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' } as any} 
-                          activeDot={{ r: 8, strokeWidth: 2, stroke: '#fff' } as any}
-                          name="sell_in"
-                          animationDuration={1500}
-                          animationEasing="ease-in-out"
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-6 md:p-8 rounded-2xl text-white flex flex-col md:flex-row items-center justify-between gap-8 shadow-lg">
-                <div className="flex items-center gap-4 md:gap-6">
-                  <div className="w-12 h-12 md:w-16 md:h-16 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 md:w-8 md:h-8 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-blue-100 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1">Totale EBITDA Network</p>
-                    <p className={cn("text-3xl md:text-4xl font-black tracking-tight", filteredInstallations.reduce((acc, i) => acc + i.ebitda, 0) < 0 ? "text-red-300" : "text-white")}>
-                      {filteredInstallations.reduce((acc, i) => acc + i.ebitda, 0).toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}
-                    </p>
-                  </div>
-                </div>
-                <div className="h-12 w-[1px] bg-white/20 hidden md:block"></div>
-                <div className="flex items-center gap-4 md:gap-6 text-right">
-                  <div>
-                    <p className="text-blue-100 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1">Volume SELL_IN Totale</p>
-                    <p className="text-3xl md:text-4xl font-black tracking-tight">
-                      {Math.round(filteredInstallations.reduce((acc, i) => acc + i.sell, 0)).toLocaleString('it-IT')} <span className="text-lg opacity-60">L</span>
-                    </p>
-                  </div>
-                  <div className="w-12 h-12 md:w-16 md:h-16 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center">
-                    <Database className="w-6 h-6 md:w-8 md:h-8 text-white" />
-                  </div>
-                </div>
-              </div>
-
-              <motion.button 
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setShowDashboard(false)}
-                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-4 rounded-xl transition-all border border-slate-200 text-sm shadow-[0_4px_0_0_#cbd5e1] active:shadow-none active:translate-y-1 flex items-center justify-center gap-2"
-              >
-                <X className="w-4 h-4" /> Chiudi Dashboard
-              </motion.button>
-            </motion.div>
-          </div>
+        </Suspense>
       </AnimatePresence>
     </div>
   );
