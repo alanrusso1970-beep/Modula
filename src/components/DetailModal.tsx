@@ -153,6 +153,20 @@ const DetailModal: React.FC<DetailModalProps> = ({
 
   const waLink = getWhatsAppLink(installation.phone);
 
+  const hasExpiredAssets = installation.rows.some(row => isExpired(row["Ultima Verifica Erogatore"]));
+
+  const [weather, setWeather] = useState<string | null>(null);
+  React.useEffect(() => {
+    fetch(`https://wttr.in/${encodeURIComponent(installation.city)}?format=1`)
+      .then(res => res.text())
+      .then(data => {
+        if (data && !data.includes('Unknown') && !data.includes('error') && data.length < 20) {
+          setWeather(data.trim());
+        }
+      })
+      .catch(() => {});
+  }, [installation.city]);
+
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4">
       <motion.div 
@@ -179,9 +193,19 @@ const DetailModal: React.FC<DetailModalProps> = ({
               <div className="flex items-center gap-2 mb-0.5">
                 <h3 className="text-lg md:text-xl font-bold text-slate-900 tracking-tight">{installation.city}</h3>
                 <span className="bg-slate-100 text-slate-600 text-[9px] md:text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border border-slate-200">PBL: {installation.pbl}</span>
+                {hasExpiredAssets && (
+                  <span className="bg-red-50 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 animate-pulse border border-red-200 ml-1">
+                    ⚠️ Verifica Scaduta
+                  </span>
+                )}
               </div>
               <p className="text-slate-500 text-[10px] md:text-xs font-medium flex items-center gap-1.5">
                 <MapIcon className="w-2.5 h-2.5 md:w-3 h-3 text-blue-500" /> {installation.address}, {installation.cap} ({installation.province})
+                {weather && (
+                  <span className="ml-2 bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200 text-[10px] font-bold shadow-sm">
+                    {weather}
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -316,23 +340,6 @@ const DetailModal: React.FC<DetailModalProps> = ({
                             <span className="text-sm font-bold text-slate-700">N/D</span>
                           )}
                        </div>
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  <h4 className="text-lg font-black text-slate-900 flex items-center gap-3">
-                    <MapIcon className="w-6 h-6 text-blue-600" /> Posizione sulla Mappa
-                  </h4>
-                  <div className="w-full h-[350px] bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm relative">
-                    <iframe 
-                      width="100%" 
-                      height="100%" 
-                      style={{ border: 0, position: 'absolute', top: 0, left: 0 }} 
-                      loading="lazy" 
-                      allowFullScreen 
-                      referrerPolicy="no-referrer-when-downgrade" 
-                      src={`https://maps.google.com/maps?q=${encodeURIComponent(`${installation.address}, ${installation.cap} ${installation.city} ${installation.province} ${installation.region}`)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-                    />
                   </div>
                 </div>
 
