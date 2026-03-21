@@ -11,7 +11,8 @@ import {
   Info, 
   Database,
   FileDown,
-  X
+  X,
+  MessageCircle
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import { pdf } from '@react-pdf/renderer';
@@ -137,6 +138,20 @@ const DetailModal: React.FC<DetailModalProps> = ({
     { name: 'EBITDA', value: installation.ebitda, color: installation.ebitda < 0 ? '#ef4444' : '#10b981', unit: '€' },
     { name: 'Sell_IN', value: installation.sell, color: '#3b82f6', unit: 'L' },
   ];
+
+  const getWhatsAppLink = (phone?: string) => {
+    if (!phone) return null;
+    let clean = phone.replace(/\D/g, '');
+    if (clean.startsWith('3') && clean.length >= 9) {
+      clean = '39' + clean;
+    }
+    if (!clean.startsWith('393') && !clean.startsWith('39') && clean.startsWith('0')) {
+        return null; 
+    }
+    return `https://wa.me/${clean}`;
+  };
+
+  const waLink = getWhatsAppLink(installation.phone);
 
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4">
@@ -280,11 +295,18 @@ const DetailModal: React.FC<DetailModalProps> = ({
                        </div>
                        <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
                           <Phone className="w-4 h-4 text-blue-600" />
-                          {installation.phone ? (
-                            <a href={`tel:${installation.phone}`} className="text-sm font-bold text-blue-600 hover:underline">{installation.phone}</a>
-                          ) : (
-                            <span className="text-sm font-bold text-slate-700">N/D</span>
-                          )}
+                          <div className="flex-1 flex items-center justify-between">
+                            {installation.phone ? (
+                              <a href={`tel:${installation.phone}`} className="text-sm font-bold text-blue-600 hover:underline">{installation.phone}</a>
+                            ) : (
+                              <span className="text-sm font-bold text-slate-700">N/D</span>
+                            )}
+                            {waLink && (
+                              <a href={waLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-md text-xs font-bold transition-colors">
+                                <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+                              </a>
+                            )}
+                          </div>
                        </div>
                        <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
                           <Mail className="w-4 h-4 text-blue-600" />
@@ -294,6 +316,23 @@ const DetailModal: React.FC<DetailModalProps> = ({
                             <span className="text-sm font-bold text-slate-700">N/D</span>
                           )}
                        </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <h4 className="text-lg font-black text-slate-900 flex items-center gap-3">
+                    <MapIcon className="w-6 h-6 text-blue-600" /> Posizione sulla Mappa
+                  </h4>
+                  <div className="w-full h-[350px] bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm relative">
+                    <iframe 
+                      width="100%" 
+                      height="100%" 
+                      style={{ border: 0, position: 'absolute', top: 0, left: 0 }} 
+                      loading="lazy" 
+                      allowFullScreen 
+                      referrerPolicy="no-referrer-when-downgrade" 
+                      src={`https://maps.google.com/maps?q=${encodeURIComponent(`${installation.address}, ${installation.cap} ${installation.city} ${installation.province} ${installation.region}`)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                    />
                   </div>
                 </div>
 
