@@ -20,12 +20,14 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
-import { pdf } from '@react-pdf/renderer';
-import { InstallationPDF } from './InstallationPDF';
+// import { pdf } from '@react-pdf/renderer';
+// import { InstallationPDF } from './InstallationPDF';
 import { Installation } from '../types';
 import { cn } from '../lib/utils';
-import Plant3D from './Plant3D';
+// import Plant3D from './Plant3D';
 import Plant2D from './Plant2D';
+
+const Plant3D = React.lazy(() => import('./Plant3D'));
 import { 
   BarChart, 
   Bar, 
@@ -71,6 +73,9 @@ const DetailModal: React.FC<DetailModalProps> = ({
     }
 
     try {
+      const { pdf } = await import('@react-pdf/renderer');
+      const { InstallationPDF } = await import('./InstallationPDF');
+
       const blob = await pdf(
         <InstallationPDF 
           installation={installation} 
@@ -300,7 +305,9 @@ const DetailModal: React.FC<DetailModalProps> = ({
           <AnimatePresence mode="wait">
             {show3D ? (
               <motion.div key="3d" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="space-y-8">
-                <Plant3D installation={installation} />
+                <React.Suspense fallback={<div className="w-full h-[400px] bg-slate-100 animate-pulse rounded-[2rem] flex items-center justify-center text-slate-400 font-bold">Caricamento Vista 3D...</div>}>
+                  <Plant3D installation={installation} />
+                </React.Suspense>
               </motion.div>
             ) : (
               <motion.div key="data" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-10">
