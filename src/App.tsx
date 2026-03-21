@@ -937,6 +937,10 @@ export default function App() {
             key="detail-modal"
             installation={selectedInstallation} 
             onClose={() => setSelectedInstallation(null)}
+            onOpenRealTimeDashboard={(plant) => {
+              setSelectedInstallation(null);
+              fetchRealTimeData(plant);
+            }}
           />
         )}
         {showRealTimePopup && (
