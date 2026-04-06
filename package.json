@@ -1,22 +1,7 @@
 {
-  "name": "react-example",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "name": "modula-redirect",
+  "version": "1.0.0",
   "scripts": {
-    "dev": "vite",
-    "build": "mkdir -p dist && echo 'Redirecting...' > dist/index.html",
-    "preview": "vite preview",
-    "test": "vitest",
-    "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
-  },
-  "dependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
-  },
-  "devDependencies": {
-    "vite": "^6.2.0",
-    "typescript": "~5.8.2"
+    "build": "mkdir -p dist && echo 'Redirect' > dist/index.html"
   }
 }
