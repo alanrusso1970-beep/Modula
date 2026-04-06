@@ -7,33 +7,25 @@ import {
   Search, 
   ChevronRight, 
   LogOut, 
-  ArrowLeft,
-  Settings,
-  TrendingUp,
-  Droplets,
-  Box,
-  Database,
   Download,
   PieChart,
-  X,
-  Navigation,
-  Phone,
-  Mail,
-  Info,
-  FileText,
   FileSpreadsheet,
   Filter,
   RotateCcw,
-  FileDown,
-  Monitor
+  Monitor,
+  Bot,
+  Bell
 } from 'lucide-react';
 import { fetchInstallations } from './services/dataService';
 import { Installation, InstallationRow, RealTimeData } from './types';
 import { cn } from './lib/utils';
 import { Skeleton } from './components/Skeleton';
 import { SearchableSelect } from './components/SearchableSelect';
-import { COLORS, provinceMap, preMapped } from './lib/constants';
-import { Sector } from 'recharts';
+import { COLORS } from './lib/constants';
+import { handleExportModulaReport, handleExportCSVData } from './lib/exportUtils';
+import { useGeocoding } from './hooks/useGeocoding';
+import { calculateHealthScore, getAlertStatus } from './lib/healthScore';
+import InstallationCard from './components/InstallationCard';
 
 
 // Lazy load components
@@ -43,54 +35,12 @@ const DetailModal = lazy(() => import('./components/DetailModal'));
 const ExcelConverter = lazy(() => import('./components/ExcelConverter'));
 const RealTimeDashboardModal = lazy(() => import('./components/RealTimeDashboardModal'));
 const AnalyzerDashboard = lazy(() => import('./components/AnalyzerDashboard'));
+const AIAssistant = lazy(() => import('./components/AIAssistant'));
+const AlertsCenter = lazy(() => import('./components/AlertsCenter'));
 
 const GAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbykayQoMqHfvrni5p-l443HINtk1WxL4sPEExpxjB_HeTaDENMXuui58kYXzmmZXtc3/exec";
 
-const renderActiveShape = (props: any) => {
-  const RADIAN = Math.PI / 180;
-  const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
-  const sin = Math.sin(-RADIAN * midAngle);
-  const cos = Math.cos(-RADIAN * midAngle);
-  const sx = cx + (outerRadius + 10) * cos;
-  const sy = cy + (outerRadius + 10) * sin;
-  const mx = cx + (outerRadius + 30) * cos;
-  const my = cy + (outerRadius + 30) * sin;
-  const ex = mx + (cos >= 0 ? 1 : -1) * 22;
-  const ey = my;
-  const textAnchor = cos >= 0 ? 'start' : 'end';
 
-  return (
-    <g>
-      <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill} className="font-bold text-lg">
-        {payload.name}
-      </text>
-      <Sector
-        cx={cx}
-        cy={cy}
-        innerRadius={innerRadius}
-        outerRadius={outerRadius}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill={fill}
-      />
-      <Sector
-        cx={cx}
-        cy={cy}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        innerRadius={outerRadius + 6}
-        outerRadius={outerRadius + 10}
-        fill={fill}
-      />
-      <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
-      <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
-      <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} textAnchor={textAnchor} fill="#333" className="font-bold text-sm">{`${value} Impianti`}</text>
-      <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} dy={18} textAnchor={textAnchor} fill="#999" className="text-xs">
-        {`(${(percent * 100).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%)`}
-      </text>
-    </g>
-  );
-};
 
 // --- Main App Component ---
 export default function App() {
@@ -108,8 +58,11 @@ export default function App() {
   const [sortBy, setSortBy] = useState<'city' | 'ebitda-desc' | 'ebitda-asc'>('city');
   const [selectedInstallation, setSelectedInstallation] = useState<Installation | null>(null);
   const [showDashboard, setShowDashboard] = useState(false);
-  const [geocodingStatus, setGeocodingStatus] = useState<{ current: number, total: number } | null>(null);
   const [activePieIndex, setActivePieIndex] = useState(0);
+  const [showAlerts, setShowAlerts] = useState(false);
+  const [deepLinkPbl, setDeepLinkPbl] = useState<string | null>(null);
+
+  const geocodingStatus = useGeocoding(isLoggedIn, data, setData);
 
   // --- Real-Time Dashboard State ---
   const [showRealTimePopup, setShowRealTimePopup] = useState(false);
@@ -150,6 +103,10 @@ export default function App() {
   useEffect(() => {
     const logged = sessionStorage.getItem('isLoggedIn') === 'true';
     if (logged) setIsLoggedIn(true);
+    // Deep link: ?pbl=XXXXX
+    const params = new URLSearchParams(window.location.search);
+    const pblParam = params.get('pbl');
+    if (pblParam) setDeepLinkPbl(pblParam);
 
     fetchInstallations().then(res => {
       setData(res);
@@ -157,140 +114,16 @@ export default function App() {
     });
   }, []);
 
+  // Open modal from deep link once data is loaded
   useEffect(() => {
-    const geocodeAll = async () => {
-      if (!data) return;
-      
-      const cacheKey = 'province_coords_cache';
-      const cache = JSON.parse(localStorage.getItem(cacheKey) || '{}');
-      
-      const installations = [...data.uniqueInstallations];
-      
-      // Identify unique provinces that need geocoding
-      const provincesToGeocode = Array.from(new Set(installations.map(i => i.province)));
-      let hasNewData = false;
-
-      // Apply cached coordinates to all installations
-      for (let i = 0; i < installations.length; i++) {
-        const provKey = installations[i].province;
-        if (!installations[i].lat && cache[provKey]) {
-          installations[i] = { ...installations[i], ...cache[provKey] };
-          hasNewData = true;
-        }
+    if (deepLinkPbl && data) {
+      const inst = data.uniqueInstallations.find(i => i.pbl === deepLinkPbl);
+      if (inst) {
+        setSelectedInstallation(inst);
+        setDeepLinkPbl(null);
       }
-
-      if (hasNewData) {
-        setData(prev => prev ? { ...prev, uniqueInstallations: [...installations] } : null);
-      }
-
-      const missingProvinces = provincesToGeocode.filter(prov => !cache[prov]);
-      if (missingProvinces.length === 0) {
-        setGeocodingStatus(null);
-        return;
-      }
-
-      setGeocodingStatus({ current: 0, total: missingProvinces.length });
-      const userEmail = 'alan.russo.1970@gmail.com';
-
-      const provinceMap: Record<string, string> = {
-        'AG': 'Agrigento', 'AL': 'Alessandria', 'AN': 'Ancona', 'AO': 'Aosta', 'AR': 'Arezzo', 'AP': 'Ascoli Piceno', 'AT': 'Asti', 'AV': 'Avellino', 'BA': 'Bari', 'BT': 'Barletta-Andria-Trani', 'BL': 'Belluno', 'BN': 'Benevento', 'BG': 'Bergamo', 'BI': 'Biella', 'BO': 'Bologna', 'BZ': 'Bolzano', 'BS': 'Brescia', 'BR': 'Brindisi', 'CA': 'Cagliari', 'CL': 'Caltanissetta', 'CB': 'Campobasso', 'CE': 'Caserta', 'CT': 'Catania', 'CZ': 'Catanzaro', 'CH': 'Chieti', 'CO': 'Como', 'CS': 'Cosenza', 'CR': 'Cremona', 'KR': 'Crotone', 'CN': 'Cuneo', 'EN': 'Enna', 'FM': 'Fermo', 'FE': 'Ferrara', 'FI': 'Firenze', 'FG': 'Foggia', 'FC': 'Forlì-Cesena', 'FR': 'Frosinone', 'GE': 'Genova', 'GO': 'Gorizia', 'GR': 'Grosseto', 'IM': 'Imperia', 'IS': 'Isernia', 'SP': 'La Spezia', 'AQ': 'L\'Aquila', 'LT': 'Latina', 'LE': 'Lecce', 'LC': 'Lecco', 'LI': 'Livorno', 'LO': 'Lodi', 'LU': 'Lucca', 'MC': 'Macerata', 'MN': 'Mantova', 'MS': 'Massa-Carrara', 'MT': 'Matera', 'ME': 'Messina', 'MI': 'Milano', 'MO': 'Modena', 'MB': 'Monza e della Brianza', 'NA': 'Napoli', 'NO': 'Novara', 'NU': 'Nuoro', 'OR': 'Oristano', 'PD': 'Padova', 'PA': 'Palermo', 'PR': 'Parma', 'PV': 'Pavia', 'PG': 'Perugia', 'PU': 'Pesaro e Urbino', 'PE': 'Pescara', 'PC': 'Piacenza', 'PI': 'Pisa', 'PT': 'Pistoia', 'PN': 'Pordenone', 'PZ': 'Potenza', 'PO': 'Prato', 'RG': 'Ragusa', 'RA': 'Ravenna', 'RC': 'Reggio Calabria', 'RE': 'Reggio Emilia', 'RI': 'Rieti', 'RN': 'Rimini', 'RM': 'Roma', 'RO': 'Rovigo', 'SA': 'Salerno', 'SS': 'Sassari', 'SV': 'Savona', 'SI': 'Siena', 'SR': 'Siracusa', 'SO': 'Sondrio', 'SU': 'Sud Sardegna', 'TA': 'Taranto', 'TE': 'Teramo', 'TR': 'Terni', 'TO': 'Torino', 'TP': 'Trapani', 'TN': 'Trento', 'TV': 'Treviso', 'TS': 'Trieste', 'UD': 'Udine', 'VA': 'Varese', 'VE': 'Venezia', 'VB': 'Verbano-Cusio-Ossola', 'VC': 'Vercelli', 'VR': 'Verona', 'VV': 'Vibo Valentia', 'VI': 'Vicenza', 'VT': 'Viterbo'
-      };
-
-      // Pre-mapped provinces
-      const preMapped: Record<string, { lat: number, lng: number }> = {
-        'CT': { lat: 37.5079, lng: 15.0830 },
-        'PA': { lat: 38.1157, lng: 13.3615 },
-        'ME': { lat: 38.1938, lng: 15.5540 },
-        'SR': { lat: 37.0755, lng: 15.2866 },
-        'RG': { lat: 36.9269, lng: 14.7255 },
-        'EN': { lat: 37.5670, lng: 14.2754 },
-        'CL': { lat: 37.4903, lng: 14.0622 },
-        'AG': { lat: 37.3107, lng: 13.5846 },
-        'TP': { lat: 38.0176, lng: 12.5372 }
-      };
-
-      for (let index = 0; index < missingProvinces.length; index++) {
-        const provAbbr = missingProvinces[index];
-        setGeocodingStatus({ current: index + 1, total: missingProvinces.length });
-        
-        // Check pre-mapped first
-        if (preMapped[provAbbr]) {
-          const coords = preMapped[provAbbr];
-          cache[provAbbr] = coords;
-          localStorage.setItem(cacheKey, JSON.stringify(cache));
-          for (let i = 0; i < installations.length; i++) {
-            if (installations[i].province === provAbbr) {
-              installations[i] = { ...installations[i], ...coords };
-            }
-          }
-          setData(prev => prev ? { ...prev, uniqueInstallations: [...installations] } : null);
-          continue;
-        }
-
-        let success = false;
-        let retries = 0;
-        const maxRetries = 3;
-
-        while (!success && retries < maxRetries) {
-          try {
-            await new Promise(r => setTimeout(r, 3000));
-
-            const fullProv = provinceMap[provAbbr] || provAbbr;
-            const query = `${fullProv}, Italy`;
-
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
-            
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-            
-            const res = await fetch(url, { 
-              signal: controller.signal,
-              headers: { 'User-Agent': 'AssetOilApp/1.0' }
-            });
-            clearTimeout(timeoutId);
-            
-            if (res.status === 429) {
-              await new Promise(r => setTimeout(r, 30000));
-              retries++;
-              continue;
-            }
-
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            
-            const results = await res.json();
-            
-            if (results && results[0]) {
-              const coords = { 
-                lat: parseFloat(results[0].lat), 
-                lng: parseFloat(results[0].lon) 
-              };
-              
-              cache[provAbbr] = coords;
-              localStorage.setItem(cacheKey, JSON.stringify(cache));
-
-              for (let i = 0; i < installations.length; i++) {
-                if (installations[i].province === provAbbr) {
-                  installations[i] = { ...installations[i], ...coords };
-                }
-              }
-              
-              setData(prev => prev ? { ...prev, uniqueInstallations: [...installations] } : null);
-            }
-            success = true;
-          } catch (e) {
-            console.error(`Geocoding error for ${provAbbr}:`, e);
-            retries++;
-            await new Promise(r => setTimeout(r, 5000 * retries));
-          }
-        }
-      }
-      setGeocodingStatus(null);
-    };
-
-    if (isLoggedIn && data) {
-      geocodeAll();
     }
-  }, [isLoggedIn, !!data]);
+  }, [deepLinkPbl, data]);
 
   const handleLogin = () => {
     sessionStorage.setItem('isLoggedIn', 'true');
@@ -302,154 +135,9 @@ export default function App() {
     setIsLoggedIn(false);
   };
 
-  const handleExport = async () => {
-    if (!data) return;
-    
-    // Calculate Summary Data
-    const provinceCounts = data.uniqueInstallations.reduce((acc, inst) => {
-      const p = inst.province || 'N/D';
-      acc[p] = (acc[p] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+  const handleExport = async () => handleExportModulaReport(data);
 
-    const mosoCounts = data.uniqueInstallations.reduce((acc, inst) => {
-      const m = inst.moso || 'N/D';
-      acc[m] = (acc[m] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    let htmlContent = `
-      <html>
-        <head>
-          <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #334155; }
-            .page-break { page-break-after: always; }
-            table { border-collapse: collapse; width: 100%; margin-bottom: 20px; background: #fff; }
-            th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; font-size: 12px; }
-            th { background-color: #f8fafc; color: #64748b; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; }
-            h1 { color: #1e293b; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 30px; }
-            h2 { color: #2563eb; margin-top: 30px; border-left: 4px solid #2563eb; padding-left: 15px; }
-            h3 { color: #475569; margin-top: 20px; font-size: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
-            .summary-box { background: #f1f5f9; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
-            .grid { display: table; width: 100%; }
-            .grid-row { display: table-row; }
-            .grid-cell { display: table-cell; padding: 5px; }
-            .label { font-weight: bold; color: #64748b; }
-          </style>
-        </head>
-        <body>
-          <div class="page-break">
-            <h1>Report MODULA - Riepilogo Generale</h1>
-            <p>Data Generazione: ${new Date().toLocaleString('it-IT')}</p>
-            <p>Totale Impianti: <strong>${data.uniqueInstallations.length}</strong></p>
-
-            <div class="summary-box">
-              <h3>1) Suddivisione per Provincia</h3>
-              <table>
-                <thead>
-                  <tr><th>Provincia</th><th>Conteggio Impianti</th></tr>
-                </thead>
-                <tbody>
-                  ${Object.entries(provinceCounts).sort((a, b) => b[1] - a[1]).map(([p, count]) => `
-                    <tr><td>${p}</td><td>${count}</td></tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            </div>
-
-            <div class="summary-box">
-              <h3>2) Suddivisione per MachCode</h3>
-              <table>
-                <thead>
-                  <tr><th>MachCode</th><th>Conteggio Impianti</th></tr>
-                </thead>
-                <tbody>
-                  ${Object.entries(mosoCounts).sort((a, b) => b[1] - a[1]).map(([m, count]) => `
-                    <tr><td>${m}</td><td>${count}</td></tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          ${data.uniqueInstallations.map(inst => `
-            <div class="page-break">
-              <h2>Dettaglio Impianto: ${inst.city}</h2>
-              
-              <div class="grid">
-                <div class="grid-row">
-                  <div class="grid-cell"><span class="label">PBL:</span> ${inst.pbl}</div>
-                  <div class="grid-cell"><span class="label">Città:</span> ${inst.city} (${inst.province})</div>
-                </div>
-                <div class="grid-row">
-                  <div class="grid-cell"><span class="label">Indirizzo:</span> ${inst.address}, ${inst.cap}</div>
-                  <div class="grid-cell"><span class="label">Gestore:</span> ${inst.manager}</div>
-                </div>
-                <div class="grid-row">
-                  <div class="grid-cell"><span class="label">Email:</span> ${inst.email}</div>
-                  <div class="grid-cell"><span class="label">Telefono:</span> ${inst.phone}</div>
-                </div>
-                <div class="grid-row">
-                  <div class="grid-cell"><span class="label">Contratto:</span> ${inst.contract}</div>
-                  <div class="grid-cell"><span class="label">MachCode:</span> ${inst.moso}</div>
-                </div>
-                <div class="grid-row">
-                  <div class="grid-cell"><span class="label">TLS:</span> ${inst.tls}</div>
-                  <div class="grid-cell"><span class="label">EBITDA 2025:</span> <span style="color: ${inst.ebitda < 0 ? '#ef4444' : '#10b981'}">${inst.ebitda.toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}</span></div>
-                </div>
-                <div class="grid-row">
-                  <div class="grid-cell"><span class="label">Sell_IN 2025:</span> ${Math.round(inst.sell).toLocaleString('it-IT')} L</div>
-                </div>
-              </div>
-
-              <h3>Dotazione Tecnica (Serbatoi ed Erogatori)</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID Serb.</th>
-                    <th>Prodotto</th>
-                    <th>Volume</th>
-                    <th>ID Erog.</th>
-                    <th>Tipo</th>
-                    <th>Modello</th>
-                    <th>Pistole</th>
-                    <th>Ultima Verifica</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${inst.rows.map(r => `
-                    <tr>
-                      <td>${r["ID Serbatoio"] || '-'}</td>
-                      <td>${r["Prodotto Serbatoio"] || '-'}</td>
-                      <td>${r["Volume Serbatoio"] || '-'}</td>
-                      <td>${r["ID Erogatore"] || '-'}</td>
-                      <td>${r["Tipo Erogatore"] || '-'}</td>
-                      <td>${r["Modello Erogatore"] || '-'}</td>
-                      <td>${r["Pistole Erogatore"] || '-'}</td>
-                      <td>${r["Ultima Verifica Erogatore"] || '-'}</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            </div>
-          `).join('')}
-        </body>
-      </html>
-    `;
-
-    const { saveAs } = await import('file-saver');
-    const blob = new Blob([htmlContent], { type: 'application/msword' });
-    saveAs(blob, `Report_MODULA_${new Date().toISOString().slice(0, 10)}.doc`);
-  };
-
-  const handleExportCSV = async () => {
-    if (!data) return;
-    const Papa = (await import('papaparse')).default;
-    const csv = Papa.unparse(data.allRows);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const { saveAs } = await import('file-saver');
-    saveAs(blob, `Dati_MODULA_${new Date().toISOString().slice(0, 10)}.csv`);
-  };
+  const handleExportCSV = async () => handleExportCSVData(data);
 
   const filteredInstallations = useMemo(() => {
     if (!data) return [];
@@ -496,10 +184,15 @@ export default function App() {
     }, {} as Record<string, number>)
   ).map(([name, value]) => ({ name, value })), [filteredInstallations]);
 
-  const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
-  const maxEbitda = useMemo(() => Math.max(...filteredInstallations.map(i => i.ebitda), 1), [filteredInstallations]);
-  const maxSell = useMemo(() => Math.max(...filteredInstallations.map(i => i.sell), 1), [filteredInstallations]);
+
+  const allMaxSell = useMemo(() => Math.max(...(data?.uniqueInstallations.map(i => i.sell) || [1]), 1), [data]);
+
+  const alertCount = useMemo(() => {
+    if (!data) return 0;
+    return data.uniqueInstallations.filter(i => getAlertStatus(i) !== 'ok').length;
+  }, [data]);
+
 
   if (!isLoggedIn) {
     return (
@@ -688,6 +381,24 @@ export default function App() {
               <PieChart className="w-4 h-4" />
               <span className="hidden sm:inline">Dashboard</span>
             </button>
+            {/* Alerts Bell */}
+            <button
+              onClick={() => setShowAlerts(true)}
+              disabled={loading}
+              className={cn(
+                "relative p-2 rounded-xl transition-all border shadow-[0_4px_0_0_#cbd5e1] active:shadow-none active:translate-y-1",
+                alertCount > 0 ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100" : "bg-white text-slate-400 border-slate-200 hover:bg-slate-50",
+                loading && "opacity-50 cursor-not-allowed"
+              )}
+              title="Centro Allerte"
+            >
+              <Bell className="w-4 h-4" />
+              {alertCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 min-w-[18px] min-h-[18px] bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none px-0.5">
+                  {alertCount > 99 ? '99+' : alertCount}
+                </span>
+              )}
+            </button>
             <div className="w-[1px] h-5 bg-slate-200 mx-0.5"></div>
             <button 
               onClick={handleLogout}
@@ -829,59 +540,14 @@ export default function App() {
                 className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3"
               >
                 {filteredInstallations.map((inst, index) => (
-                  <motion.div 
-                    layout
+                  <InstallationCard 
                     key={`${inst.pbl}-${index}`}
-                    variants={{
-                      hidden: { opacity: 0, y: 20 },
-                      show: { opacity: 1, y: 0 }
-                    }}
-                    whileHover={{ y: -2, scale: 1.01 }}
-                    onClick={() => setSelectedInstallation(inst)}
-                    className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between h-full min-h-[160px]"
-                  >
-                    <div className="relative z-10">
-                      <div className="flex justify-between items-start mb-4">
-                        <span className="bg-slate-100 text-slate-600 text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md border border-slate-200">
-                          PBL: {inst.pbl}
-                        </span>
-                        <div className="flex gap-2">
-                          <motion.button 
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              fetchRealTimeData(inst);
-                            }}
-                            className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all border border-emerald-100 shadow-[0_2px_0_0_#10b981] active:shadow-none active:translate-y-1"
-                            title="Aggiorna dati in tempo reale"
-                          >
-                            <Monitor className="w-4 h-4" />
-                          </motion.button>
-                          <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors border border-slate-200 group-hover:border-blue-600">
-                            <ChevronRight className="w-4 h-4" />
-                          </div>
-                        </div>
-                      </div>
-                      <h3 className="text-sm font-bold text-slate-800 mb-0.5 tracking-tight truncate">{inst.city}</h3>
-                      <p className="text-[10px] text-slate-500 mb-3 font-medium truncate">{inst.address}</p>
-                      
-                      <div className="space-y-2">
-                        <div>
-                          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">EBITDA 2025</p>
-                          <p className={cn("text-sm font-mono font-bold", inst.ebitda < 0 ? "text-red-600" : "text-emerald-600")}>
-                            {inst.ebitda.toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Volume Vendite</p>
-                          <p className="text-sm font-mono font-bold text-blue-600">
-                            {Math.round(inst.sell).toLocaleString('it-IT')} L
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
+                    inst={inst}
+                    index={index}
+                    allMaxSell={allMaxSell}
+                    onSelect={setSelectedInstallation}
+                    onFetchRealTimeData={fetchRealTimeData}
+                  />
                 ))}
               </motion.div>
 
@@ -966,6 +632,26 @@ export default function App() {
           />
         </Suspense>
       </AnimatePresence>
+
+      {/* Alerts Center Panel */}
+      <Suspense fallback={null}>
+        <AlertsCenter
+          show={showAlerts}
+          onClose={() => setShowAlerts(false)}
+          installations={data?.uniqueInstallations || []}
+          onSelectInstallation={(inst) => {
+            setShowAlerts(false);
+            setSelectedInstallation(inst);
+          }}
+        />
+      </Suspense>
+
+      {/* AI Assistant FAB */}
+      {isLoggedIn && !loading && (
+        <Suspense fallback={null}>
+          <AIAssistant installations={data?.uniqueInstallations || []} />
+        </Suspense>
+      )}
     </div>
   );
 }

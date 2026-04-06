@@ -91,14 +91,26 @@ const MapView: React.FC<MapViewProps> = ({
     return acc;
   }, {} as Record<string, { province: string, lat: number, lng: number, count: number, installations: Installation[] }>);
 
-  const createClusterIcon = (count: number) => {
+  const createClusterIcon = (count: number, avgEbitda: number) => {
+    let bgColor = '#2563eb'; // blue default
+    let borderColor = '#1d4ed8';
+    let emoji = '';
+    if (avgEbitda > 50000) { bgColor = '#10b981'; borderColor = '#059669'; emoji = '▲'; }
+    else if (avgEbitda > 0) { bgColor = '#3b82f6'; borderColor = '#2563eb'; emoji = ''; }
+    else if (avgEbitda > -30000) { bgColor = '#f59e0b'; borderColor = '#d97706'; emoji = '▼'; }
+    else { bgColor = '#ef4444'; borderColor = '#dc2626'; emoji = '▼▼'; }
+
     return L.divIcon({
-      html: `<div class="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold border-2 border-white shadow-lg text-lg">${count}</div>`,
+      html: `<div style="background:${bgColor};border:2.5px solid ${borderColor};color:white;width:44px;height:44px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;box-shadow:0 4px 12px ${bgColor}55;font-size:14px;line-height:1;gap:1px">
+        <span>${count}</span>
+        ${emoji ? `<span style="font-size:7px;opacity:0.85">${emoji}</span>` : ''}
+      </div>`,
       className: 'custom-cluster-icon',
-      iconSize: [40, 40],
-      iconAnchor: [20, 20]
+      iconSize: [44, 44],
+      iconAnchor: [22, 22]
     });
   };
+
 
   return (
     <div className="absolute inset-0 bg-slate-100 overflow-hidden">
@@ -121,16 +133,19 @@ const MapView: React.FC<MapViewProps> = ({
           </Marker>
         )}
 
-        {Object.values(provinceGroups).map(group => (
-          <Marker 
-            key={group.province} 
-            position={[group.lat, group.lng]}
-            icon={createClusterIcon(group.count)}
-            eventHandlers={{
-              click: () => onProceed(group.province)
-            }}
-          />
-        ))}
+        {Object.values(provinceGroups).map(group => {
+          const avgEbitda = group.installations.reduce((s, i) => s + i.ebitda, 0) / group.count;
+          return (
+            <Marker 
+              key={group.province} 
+              position={[group.lat, group.lng]}
+              icon={createClusterIcon(group.count, avgEbitda)}
+              eventHandlers={{
+                click: () => onProceed(group.province)
+              }}
+            />
+          );
+        })}
       </MapContainer>
 
       {/* Floating Info Card */}

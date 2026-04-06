@@ -12,19 +12,18 @@ import {
   Database,
   FileDown,
   X,
-  MessageCircle,
   Activity,
   QrCode,
   Copy,
   Check,
-  ChevronRight
+  ChevronRight,
+  Zap,
+  RefreshCcw
 } from 'lucide-react';
+
 import { saveAs } from 'file-saver';
-// import { pdf } from '@react-pdf/renderer';
-// import { InstallationPDF } from './InstallationPDF';
 import { Installation } from '../types';
 import { cn } from '../lib/utils';
-// import Plant3D from './Plant3D';
 import Plant2D from './Plant2D';
 
 const Plant3D = React.lazy(() => import('./Plant3D'));
@@ -54,6 +53,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const planImageRef = useRef<string | null>(null);
 
+
   const handleCapture = (dataUrl: string) => {
     if (dataUrl && dataUrl.length > 5000) {
       planImageRef.current = dataUrl;
@@ -62,8 +62,6 @@ const DetailModal: React.FC<DetailModalProps> = ({
 
   const handleDownloadPDF = async () => {
     setIsGeneratingPDF(true);
-    
-    // Ensure we have the plan image before generating
     if (!planImageRef.current) {
       let attempts = 0;
       while (!planImageRef.current && attempts < 100) {
@@ -75,14 +73,12 @@ const DetailModal: React.FC<DetailModalProps> = ({
     try {
       const { pdf } = await import('@react-pdf/renderer');
       const { InstallationPDF } = await import('./InstallationPDF');
-
       const blob = await pdf(
         <InstallationPDF 
           installation={installation} 
           planImage={planImageRef.current} 
         />
       ).toBlob();
-      
       saveAs(blob, `Report_${installation.city}_${installation.pbl}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -99,7 +95,6 @@ const DetailModal: React.FC<DetailModalProps> = ({
   };
 
   const seenTanks = new Set<string>();
-
   installation.rows.forEach(row => {
     const tankId = row["ID Serbatoio"];
     if (tankId && !seenTanks.has(tankId)) {
@@ -126,21 +121,14 @@ const DetailModal: React.FC<DetailModalProps> = ({
     if (!dateString) return false;
     let parts = dateString.split(/[-/]/);
     if (parts.length !== 3) return false;
-    
     let year, month, day;
     if (parts[0].length === 4) {
-      year = parseInt(parts[0]);
-      month = parseInt(parts[1]) - 1;
-      day = parseInt(parts[2]);
+      year = parseInt(parts[0]); month = parseInt(parts[1]) - 1; day = parseInt(parts[2]);
     } else {
-      day = parseInt(parts[0]);
-      month = parseInt(parts[1]) - 1;
-      year = parseInt(parts[2]);
+      day = parseInt(parts[0]); month = parseInt(parts[1]) - 1; year = parseInt(parts[2]);
     }
-    
     const d = new Date(year, month, day);
     if (isNaN(d.getTime())) return false;
-    
     const now = new Date();
     const diffMonths = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
     return diffMonths > 24;
@@ -154,17 +142,12 @@ const DetailModal: React.FC<DetailModalProps> = ({
   const getWhatsAppLink = (phone?: string) => {
     if (!phone) return null;
     let clean = phone.replace(/\D/g, '');
-    if (clean.startsWith('3') && clean.length >= 9) {
-      clean = '39' + clean;
-    }
-    if (!clean.startsWith('393') && !clean.startsWith('39') && clean.startsWith('0')) {
-        return null; 
-    }
+    if (clean.startsWith('3') && clean.length >= 9) clean = '39' + clean;
+    if (!clean.startsWith('393') && !clean.startsWith('39') && clean.startsWith('0')) return null; 
     return `https://wa.me/${clean}`;
   };
 
   const waLink = getWhatsAppLink(installation.phone);
-
   const hasExpiredAssets = installation.rows.some(row => isExpired(row["Ultima Verifica Erogatore"]));
 
   const [weather, setWeather] = useState<string | null>(null);
@@ -190,14 +173,16 @@ const DetailModal: React.FC<DetailModalProps> = ({
     <button 
       onClick={(e) => { e.stopPropagation(); handleCopy(text, field); }}
       className="ml-2 p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors inline-flex align-middle"
-      title="Copia negli appunti"
     >
       {copiedField === field ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
     </button>
   );
 
   const [showQR, setShowQR] = useState(false);
-  const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${installation.address}, ${installation.cap} ${installation.city} ${installation.province} ${installation.region}`)}`;
+  const appBaseUrl = window.location.origin + window.location.pathname;
+  const deepLinkUrl = `${appBaseUrl}?pbl=${installation.pbl}`;
+  const addressQuery = encodeURIComponent(`${installation.address}, ${installation.city}, ${installation.province}`);
+  const mapUrl = `https://www.google.com/maps/search/?api=1&query=${addressQuery}`;
 
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4">
@@ -235,11 +220,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
               </div>
               <p className="text-slate-500 text-[10px] md:text-xs font-medium flex items-center gap-1.5">
                 <MapIcon className="w-2.5 h-2.5 md:w-3 h-3 text-blue-500" /> {installation.address}, {installation.cap} ({installation.province})
-                {weather && (
-                  <span className="ml-2 bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200 text-[10px] font-bold shadow-sm">
-                    {weather}
-                  </span>
-                )}
+                {weather && <span className="ml-2 bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200 text-[10px] font-bold shadow-sm">{weather}</span>}
               </p>
             </div>
           </div>
@@ -276,10 +257,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
             >
               <QrCode className="w-4 h-4 md:w-5 md:h-5" />
             </motion.button>
-            <motion.button 
-              whileHover={{ rotate: 90, scale: 1.1 }} onClick={onClose} 
-              className="p-2 md:p-3 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all"
-            >
+            <motion.button whileHover={{ rotate: 90, scale: 1.1 }} onClick={onClose} className="p-2 md:p-3 bg-slate-100 hover:bg-slate-200 rounded-lg transition-all">
               <X className="w-6 h-6" />
             </motion.button>
           </div>
@@ -287,17 +265,14 @@ const DetailModal: React.FC<DetailModalProps> = ({
 
         {showQR && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: -20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: -20 }}
+            initial={{ opacity: 0, scale: 0.9, y: -20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: -20 }}
             className="absolute top-20 right-4 md:top-24 md:right-8 bg-white p-5 rounded-2xl shadow-2xl border border-slate-100 z-[4000] flex flex-col items-center gap-3"
           >
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Naviga all'impianto</p>
-            <img 
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(mapUrl)}`} 
-              alt="QR Code Impianto" 
-              className="w-32 h-32 rounded-lg"
-            />
+            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(deepLinkUrl)}`} alt="QR Code" className="w-32 h-32 rounded-lg" />
+            <button onClick={() => handleCopy(deepLinkUrl, 'qr-link')} className="w-full flex items-center justify-center gap-2 text-[10px] font-bold text-slate-500 hover:text-blue-600 transition-colors py-1">
+              {copiedField === 'qr-link' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />} copia link
+            </button>
           </motion.div>
         )}
 
@@ -311,163 +286,65 @@ const DetailModal: React.FC<DetailModalProps> = ({
               </motion.div>
             ) : (
               <motion.div key="data" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-10">
+
+                {/* Data Sections */}
                 <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200 shadow-sm">
-                  <h4 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
-                    <TrendingUp className="w-6 h-6 text-blue-600" /> Performance & Capacità
-                  </h4>
+                  <h4 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3"><TrendingUp className="w-6 h-6 text-blue-600" /> Performance & Capacità</h4>
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-1 space-y-4">
-                      {performanceStats.map((item) => {
-                        const hash = item.name.charCodeAt(0) + installation.pbl.charCodeAt(0) + (Math.abs(installation.ebitda % 100));
-                        const trendValue = ((hash % 15) + (hash % 10) / 10).toFixed(2);
-                        const isPositive = hash % 2 === 0;
-                        return (
-                          <div key={item.name} className="bg-slate-50 p-5 rounded-xl border border-slate-200 relative overflow-hidden group">
-                            <div className="flex justify-between items-start mb-2">
-                              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{item.name} 2025</p>
-                              <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5", isPositive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700")}>
-                                {isPositive ? '▲ +' : '▼ -'}{trendValue}%
-                              </span>
-                            </div>
-                            <p className="text-2xl font-mono font-bold relative z-10" style={{ color: item.color }}>
-                              {item.name === 'EBITDA' ? item.value.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' }) : `${Math.round(item.value).toLocaleString('it-IT')} ${item.unit}`}
-                            </p>
-                            <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent group-hover:via-blue-300 transition-all"></div>
-                          </div>
-                      )})}
-                      
+                      {performanceStats.map((item) => (
+                        <div key={item.name} className="bg-slate-50 p-5 rounded-xl border border-slate-200 relative overflow-hidden group transition-all">
+                          <div className="flex justify-between items-start mb-2"><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{item.name} 2025</p></div>
+                          <p className="text-2xl font-mono font-bold relative z-10" style={{ color: item.color }}>{item.name === 'EBITDA' ? item.value.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' }) : `${Math.round(item.value).toLocaleString('it-IT')} ${item.unit}`}</p>
+                          <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent group-hover:via-blue-300 transition-all"></div>
+                        </div>
+                      ))}
                       {onOpenRealTimeDashboard && (
-                        <button 
-                          onClick={() => onOpenRealTimeDashboard(installation)}
-                          className="w-full mt-2 p-4 rounded-xl vivid-gradient text-white flex items-center justify-between group shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-all"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                              <Activity className="w-4 h-4 text-white" />
-                            </div>
-                            <div className="text-left">
-                              <p className="text-xs font-black uppercase tracking-wider">Vendite Live</p>
-                              <p className="text-[9px] font-medium text-blue-100 mt-0.5">Dati aggiornati MESE/MESE</p>
-                            </div>
-                          </div>
+                        <button onClick={() => onOpenRealTimeDashboard(installation)} className="w-full mt-2 p-4 rounded-xl vivid-gradient text-white flex items-center justify-between group shadow-lg shadow-blue-500/30 active:scale-[0.98] transition-all">
+                          <div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center"><Activity className="w-4 h-4 text-white" /></div><div className="text-left"><p className="text-xs font-black uppercase tracking-wider">Vendite Live</p><p className="text-[9px] font-medium text-blue-100 mt-0.5">Dati aggiornati MESE/MESE</p></div></div>
                           <ChevronRight className="w-5 h-5 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-transform" />
                         </button>
                       )}
                     </div>
-                    <div className="lg:col-span-2 space-y-4">
-                      <div className="h-[260px] bg-slate-50 rounded-xl p-4 border border-slate-200">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={tankData}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                            <XAxis dataKey="id" fontSize={11} tick={{ fill: '#64748b' }} />
-                            <YAxis fontSize={11} tick={{ fill: '#64748b' }} />
-                            <ReTooltip />
-                            <Bar dataKey="volume" radius={[4, 4, 0, 0]} barSize={32}>
-                              {tankData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
+                    <div className="lg:col-span-2"><div className="h-[260px] bg-slate-50 rounded-xl p-4 border border-slate-200"><ResponsiveContainer width="100%" height="100%"><BarChart data={tankData}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="id" fontSize={11} tick={{ fill: '#64748b' }} /><YAxis fontSize={11} tick={{ fill: '#64748b' }} /><ReTooltip /><Bar dataKey="volume" radius={[4, 4, 0, 0]} barSize={32}>{tankData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}</Bar></BarChart></ResponsiveContainer></div></div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                    <div className="space-y-6">
-                    <h4 className="text-lg font-black text-slate-900 flex items-center gap-3">
-                      <Info className="w-6 h-6 text-blue-600" /> Informazioni Generali
-                    </h4>
+                    <h4 className="text-lg font-black text-slate-900 flex items-center gap-3"><Info className="w-6 h-6 text-blue-600" /> Informazioni Generali</h4>
                     <div className="bg-slate-50 rounded-xl p-4 md:p-6 space-y-3 border border-slate-200 shadow-sm">
-                      {[
-                        { label: 'Gestore', value: installation.manager },
-                        { label: 'Contratto Terreno', value: installation.contract },
-                        { label: 'Contratto Gestore', value: installation.moso },
-                        { label: 'Misura di Elettronico', value: installation.tls }
-                      ].map((item) => (
-                        <div key={item.label} className="flex justify-between items-center p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
-                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{item.label}</span>
-                          <span className="text-sm font-black text-slate-900 flex items-center">{item.value || 'N/D'} {item.value && <CopyButton text={item.value} field={item.label} />}</span>
-                        </div>
+                      {[ { label: 'Gestore', value: installation.manager }, { label: 'Contratto Terreno', value: installation.contract }, { label: 'Contratto Gestore', value: installation.moso }, { label: 'Misura di Elettronico', value: installation.tls } ].map((item) => (
+                        <div key={item.label} className="flex justify-between items-center p-3 bg-white rounded-lg border border-slate-100 shadow-sm"><span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{item.label}</span><span className="text-sm font-black text-slate-900 flex items-center">{item.value || 'N/D'} {item.value && <CopyButton text={item.value} field={item.label} />}</span></div>
                       ))}
                     </div>
                   </div>
-
                   <div className="space-y-6">
-                    <h4 className="text-lg font-black text-slate-900 flex items-center gap-3">
-                      <Phone className="w-6 h-6 text-blue-600" /> Contatti
-                    </h4>
-                       <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
-                          <MapIcon className="w-4 h-4 text-emerald-600" />
-                          <div className="flex flex-col">
-                            <span className="text-sm font-bold text-slate-800">{installation.city} - {installation.province}</span>
-                            <a 
-                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${installation.address}, ${installation.cap} ${installation.city} ${installation.province} ${installation.region}`)}`} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="text-xs font-bold text-emerald-600 hover:underline mt-0.5"
-                            >
-                              Apri in Google Maps
-                            </a>
-                          </div>
-                       </div>
-                       <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
-                          <Phone className="w-4 h-4 text-blue-600" />
-                          <div className="flex-1 flex items-center justify-between">
-                            {installation.phone ? (
-                              <div className="flex items-center">
-                                <a href={`tel:${installation.phone}`} className="text-sm font-bold text-blue-600 hover:underline">{installation.phone}</a>
-                                <CopyButton text={installation.phone} field="phone" />
-                              </div>
-                            ) : (
-                              <span className="text-sm font-bold text-slate-700">N/D</span>
-                            )}
-                            {waLink && (
-                              <a href={waLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-md text-xs font-bold transition-colors">
-                                <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
-                              </a>
-                            )}
-                          </div>
-                       </div>
-                       <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-sm">
-                          <Mail className="w-4 h-4 text-blue-600" />
-                          {installation.email ? (
-                            <a href={`mailto:${installation.email}`} className="text-sm font-bold text-blue-600 hover:underline">{installation.email}</a>
-                          ) : (
-                            <span className="text-sm font-bold text-slate-700">N/D</span>
-                          )}
-                       </div>
+                    <h4 className="text-lg font-black text-slate-900 flex items-center gap-3"><Phone className="w-6 h-6 text-blue-600" /> Contatti</h4>
+                    <div className="bg-white rounded-xl p-4 space-y-3 border border-slate-200 shadow-sm">
+                       <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"><MapIcon className="w-4 h-4 text-emerald-600" /><div className="flex flex-col"><span className="text-sm font-bold text-slate-800">{installation.city}</span><a href={mapUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] font-black text-emerald-600 uppercase">📍 Google Maps</a></div></div>
+                       <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"><Phone className="w-4 h-4 text-blue-600" /><div className="flex-1 flex justify-between items-center">{installation.phone ? <div className="flex items-center"><a href={`tel:${installation.phone}`} className="text-sm font-bold text-blue-600 underline">{installation.phone}</a><CopyButton text={installation.phone} field="phone" /></div> : <span className="text-sm">N/D</span>}{waLink && <a href={waLink} target="_blank" rel="noopener noreferrer" className="px-3 py-1 bg-green-50 text-green-600 rounded text-[10px] font-black uppercase">WhatsApp</a>}</div></div>
+                       <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"><Mail className="w-4 h-4 text-blue-600" />{installation.email ? <a href={`mailto:${installation.email}`} className="text-sm font-bold text-blue-600 underline">{installation.email}</a> : <span className="text-sm">N/D</span>}</div>
+                    </div>
                   </div>
                 </div>
 
                 <div className="space-y-6">
-                  <h4 className="text-lg font-black text-slate-900 flex items-center gap-3">
-                    <Database className="w-6 h-6 text-blue-600" /> Dotazione Asset
-                  </h4>
+                  <h4 className="text-lg font-black text-slate-900 flex items-center gap-3"><Database className="w-6 h-6 text-blue-600" /> Dotazione Asset</h4>
                   <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 text-slate-500 uppercase">
-                        <tr>
-                          <th className="px-4 py-3 font-bold">Tipo</th>
-                          <th className="px-4 py-3 font-bold">Prodotto</th>
-                          <th className="px-4 py-3 font-bold">Capacità</th>
-                          <th className="px-4 py-3 font-bold">Erogatore</th>
-                          <th className="px-4 py-3 font-bold">Modello</th>
-                          <th className="px-4 py-3 font-bold">Ultima Verifica</th>
-                        </tr>
-                      </thead>
+                      <thead className="bg-slate-50 text-slate-500 uppercase"><tr><th className="px-4 py-3 font-bold">Tipo</th><th className="px-4 py-3 font-bold">Prodotto</th><th className="px-4 py-3 font-bold">Capacità</th><th className="px-4 py-3 font-bold">Erogatore</th><th className="px-4 py-3 font-bold">Modello</th><th className="px-4 py-3 font-bold">Ultima Verifica</th></tr></thead>
                       <tbody className="divide-y divide-slate-100">
                         {installation.rows.map((row, i) => {
                           const expired = isExpired(row["Ultima Verifica Erogatore"]);
                           return (
                             <tr key={i} className="hover:bg-slate-50">
-                              <td className="px-4 py-3 font-medium">Serbatoio {row["ID Serbatoio"]}</td>
+                              <td className="px-4 py-3">Serbatoio {row["ID Serbatoio"]}</td>
                               <td className="px-4 py-3">{row["Prodotto Serbatoio"]}</td>
                               <td className="px-4 py-3">{row["Volume Serbatoio"]} Kl</td>
                               <td className="px-4 py-3">{row["ID Erogatore"]}</td>
-                              <td className="px-4 py-3">{row["Modello Erogatore"]}</td>
-                              <td className={cn("px-4 py-3 font-medium", expired && "text-red-500 font-bold")}>
-                                {row["Ultima Verifica Erogatore"] || '-'} {expired && "(Scaduta)"}
-                              </td>
+                              <td className="px-4 py-3 text-[10px]">{row["Modello Erogatore"]}</td>
+                              <td className={cn("px-4 py-3 font-bold", expired && "text-red-500")}>{row["Ultima Verifica Erogatore"] || '-'} {expired && "(⚠️)"}</td>
                             </tr>
                           );
                         })}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileSpreadsheet, Play, CheckCircle2, AlertCircle, Loader2, ExternalLink, FileText, ChevronRight, Database } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -31,6 +31,7 @@ const ExcelConverter: React.FC = () => {
   const [result, setResult] = useState<{ url: string; csvs: string[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
+  const instanceId = useMemo(() => Math.random().toString(36).slice(2, 8).toUpperCase(), []);
 
   // Auto-scroll logs
   useEffect(() => {
@@ -39,7 +40,7 @@ const ExcelConverter: React.FC = () => {
 
   const addLog = (text: string, type: LogMessage['type'] = 'info') => {
     const newLog: LogMessage = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).slice(2, 11),
       text,
       type,
       timestamp: new Date().toLocaleTimeString('it-IT')
@@ -50,10 +51,25 @@ const ExcelConverter: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
+      
+      // Security & Validation
+      const ext = selectedFile.name.split('.').pop()?.toLowerCase();
+      if (ext !== 'xlsx' && ext !== 'xls') {
+        setError("Formato file non valido. Carica un file .xlsx o .xls");
+        addLog("Errore: Formato file non supportato", "error");
+        return;
+      }
+
+      if (selectedFile.size > 20 * 1024 * 1024) {
+        setError("File troppo grande. Massimo 20MB consentiti.");
+        addLog("Errore: Dimensioni file eccedono 20MB", "error");
+        return;
+      }
+
       setFile(selectedFile);
       setResult(null);
       setError(null);
-      addLog(`File selezionato: ${selectedFile.name}`, "info");
+      addLog(`File selezionato: ${selectedFile.name} (${(selectedFile.size / 1024).toFixed(1)} KB)`, "info");
     }
   };
 
@@ -131,27 +147,30 @@ const ExcelConverter: React.FC = () => {
               addLog("Connessione API esterna in corso...", "info");
               const response = await fetch(GAS_SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors', // GAS Web App redirects require special handling or no-cors
+                mode: 'cors', // Changed from 'no-cors' to 'cors' to handle response
+                headers: {
+                  'Content-Type': 'text/plain;charset=utf-8', // Using text/plain to avoid CORS preflight issues with GAS
+                },
                 body: JSON.stringify(extractedData),
               });
 
-              // Note: with no-cors we can't see the response body. 
-              // For actual responses from GAS API, one often uses a proxy or careful CORS.
-              // However, POST to Web App usually works "fire and forget" or requires redirection handling.
-              // To get the response body, GAS script needs to be very specific or use a redirection trick.
+              if (!response.ok) {
+                throw new Error(`HTTP Error: ${response.status}`);
+              }
 
-              // Let's assume for now the user follows the standard Web App deployment.
-              // If we use 'cors', GAS must handle OPTIONS. 
-              // Simplified: we'll use a better approach if possible, but for now we warn:
-              addLog("Richiesta inviata. In attesa di conferma dal server...", "warning");
-
-              // For better UX, we'll suggest using a specific deployment if body is needed.
-              // But as a first step, let's keep it simple.
-              setTimeout(() => {
-                addLog("Se vedi i file su Drive, la procedura è andata a buon fine.", "success");
-                setIsProcessing(false);
-                setProgress(100);
-              }, 5000);
+              const resText = await response.text();
+              try {
+                const resJson = JSON.parse(resText);
+                handleSuccess(resJson);
+              } catch (e) {
+                // If it's not JSON, it might be a redirect or error page
+                addLog("Risposta ricevuta, ma il formato non è JSON. Controlla i permessi dello script.", "warning");
+                addLog("Tentativo di chiusura forzata con successo...", "info");
+                setTimeout(() => {
+                  setIsProcessing(false);
+                  setProgress(100);
+                }, 2000);
+              }
 
             } catch (err: any) {
               handleError(`Errore API: ${err.message}`);
@@ -301,7 +320,7 @@ const ExcelConverter: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between px-1">
               <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Log di Sistema</h4>
-              <span className="text-[10px] font-bold text-slate-400 font-mono">ID: {Math.random().toString(36).substr(2, 6).toUpperCase()}</span>
+              <span className="text-[10px] font-bold text-slate-400 font-mono">ID: {instanceId}</span>
             </div>
             <div className="bg-slate-950 rounded-2xl p-6 h-52 overflow-y-auto font-mono text-[11px] border border-slate-800 shadow-2xl shadow-inner custom-scrollbar relative">
               <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">

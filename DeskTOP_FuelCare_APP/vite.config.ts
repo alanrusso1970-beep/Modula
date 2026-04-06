@@ -16,6 +16,7 @@ export default defineConfig(({mode}) => {
       },
     },
     build: {
+      chunkSizeWarningLimit: 2000,
       rollupOptions: {
         output: {
           // Manual chunks removed to avoid silent white screen issues.
