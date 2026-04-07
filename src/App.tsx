@@ -21,6 +21,7 @@ import { Installation, InstallationRow, RealTimeData } from './types';
 import { cn } from './lib/utils';
 import { Skeleton } from './components/Skeleton';
 import { SearchableSelect } from './components/SearchableSelect';
+import { MultiSelectSearchable } from './components/MultiSelectSearchable';
 import { COLORS } from './lib/constants';
 import { handleExportModulaReport, handleExportCSVData } from './lib/exportUtils';
 import { useGeocoding } from './hooks/useGeocoding';
@@ -49,8 +50,8 @@ export default function App() {
   const [data, setData] = useState<{ allRows: InstallationRow[], uniqueInstallations: Installation[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedProvince, setSelectedProvince] = useState('');
-  const [selectedRegion, setSelectedRegion] = useState('');
+  const [selectedProvinces, setSelectedProvinces] = useState<string[]>([]);
+  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedType, setSelectedType] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedInspectionYear, setSelectedInspectionYear] = useState('');
@@ -145,8 +146,8 @@ export default function App() {
     const filtered = data.uniqueInstallations.filter(inst => {
       const matchesSearch = inst.city.toLowerCase().includes(searchQuery.toLowerCase()) || 
                            inst.pbl.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesProvince = selectedProvince === '' || inst.province === selectedProvince;
-      const matchesRegion = selectedRegion === '' || inst.region === selectedRegion;
+      const matchesProvince = selectedProvinces.length === 0 || selectedProvinces.includes(inst.province);
+      const matchesRegion = selectedRegions.length === 0 || selectedRegions.includes(inst.region);
       const matchesType = selectedType === '' || inst.contract === selectedType;
       const matchesStatus = selectedStatus === '' || inst.moso === selectedStatus;
       
@@ -166,7 +167,7 @@ export default function App() {
     }
     
     return sorted;
-  }, [data, searchQuery, selectedProvince, selectedRegion, selectedType, selectedStatus, selectedInspectionYear, sortBy]);
+  }, [data, searchQuery, selectedProvinces, selectedRegions, selectedType, selectedStatus, selectedInspectionYear, sortBy]);
 
   const provinces = useMemo(() => [...new Set(data?.uniqueInstallations.map(i => i.province) || [])].sort(), [data]);
   const regions = useMemo(() => [...new Set(data?.uniqueInstallations.map(i => i.region) || [])].filter(Boolean).sort(), [data]);
@@ -255,10 +256,10 @@ export default function App() {
               </div>
               
               <div className="w-[180px] shrink-0">
-                <SearchableSelect
+                <MultiSelectSearchable
                   options={provinces}
-                  value={selectedProvince}
-                  onChange={setSelectedProvince}
+                  value={selectedProvinces}
+                  onChange={setSelectedProvinces}
                   placeholder="Provincia"
                   className="w-full"
                   compact
@@ -266,10 +267,10 @@ export default function App() {
               </div>
 
               <div className="w-[180px] shrink-0">
-                <SearchableSelect
+                <MultiSelectSearchable
                   options={regions}
-                  value={selectedRegion}
-                  onChange={setSelectedRegion}
+                  value={selectedRegions}
+                  onChange={setSelectedRegions}
                   placeholder="Regione"
                   className="w-full"
                   compact
@@ -313,8 +314,8 @@ export default function App() {
               <button 
                 onClick={() => {
                   setSearchQuery('');
-                  setSelectedProvince('');
-                  setSelectedRegion('');
+                  setSelectedProvinces([]);
+                  setSelectedRegions([]);
                   setSelectedType('');
                   setSelectedStatus('');
                   setSelectedInspectionYear('');
@@ -496,10 +497,12 @@ export default function App() {
               <MapView 
                 installations={filteredInstallations} 
                 onProceed={(province) => {
-                  if (province) setSelectedProvince(province);
+                  if (province && !selectedProvinces.includes(province)) {
+                    setSelectedProvinces([...selectedProvinces, province]);
+                  }
                   setView('list');
                 }} 
-                onResetProvince={() => setSelectedProvince('')}
+                onResetProvince={() => setSelectedProvinces([])}
                 geocodingStatus={geocodingStatus}
               />
             </motion.div>

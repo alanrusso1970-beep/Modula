@@ -15,6 +15,7 @@ import {
   Line
 } from 'recharts';
 import { Installation, RealTimeData } from '../types';
+import { cn } from '../lib/utils';
 
 const MONTH_NAMES = [
   'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
@@ -67,7 +68,7 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
   const [syncProgress, setSyncProgress] = React.useState(0);
 
   React.useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (loading) {
       setSyncProgress(0);
       interval = setInterval(() => {
@@ -100,11 +101,11 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
 
   const products = Object.keys(dataByProduct).sort();
 
-  // Calculate percentage of "Servito" if data exists
+  // Calculate Total Sellin and Total SellinPY
   const totalSellin = data.reduce((acc, curr) => acc + curr.sellin, 0);
-  const totalServito = data.reduce((acc, curr) => acc + curr.servito, 0);
-  const servitoPercentage = totalSellin + totalServito > 0 
-    ? (totalServito / (totalSellin + totalServito)) * 100 
+  const totalSellinPY = data.reduce((acc, curr) => acc + curr.sellinPY, 0);
+  const deltaPercentage = totalSellinPY > 0 
+    ? ((totalSellin - totalSellinPY) / totalSellinPY) * 100 
     : 0;
 
   // Calculate total by month for unified chart
@@ -183,26 +184,25 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-3xl shadow-lg shadow-blue-500/30 text-white relative overflow-hidden group border border-blue-400/50">
                   <div className="absolute -top-4 -right-4 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500"><Activity className="w-32 h-32" /></div>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-blue-100 mb-2 relative z-10">Totale Sell-In (P)</p>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-blue-100 mb-2 relative z-10">Totale Anno in Corso</p>
                   <p className="text-4xl md:text-5xl font-black font-mono tracking-tight relative z-10 drop-shadow-sm">{Math.round(totalSellin).toLocaleString('it-IT')}</p>
-                  <p className="text-sm font-medium text-blue-100 mt-2 relative z-10">Litri · Anno in corso</p>
+                  <p className="text-sm font-medium text-blue-100 mt-2 relative z-10">Variazione rispetto all'anno precedente</p>
                 </div>
-                <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-6 rounded-3xl shadow-lg shadow-indigo-500/30 text-white relative overflow-hidden group border border-indigo-400/50">
-                  <div className="absolute -top-4 -right-4 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500"><Droplets className="w-32 h-32" /></div>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-indigo-100 mb-2 relative z-10">Totale Servito (R)</p>
-                  <p className="text-4xl md:text-5xl font-black font-mono tracking-tight relative z-10 drop-shadow-sm">{Math.round(totalServito).toLocaleString('it-IT')}</p>
-                  <p className="text-sm font-medium text-indigo-100 mt-2 relative z-10">Litri · Anno in corso</p>
-                </div>
-                <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 rounded-3xl shadow-lg shadow-emerald-500/30 text-white relative overflow-hidden group border border-emerald-400/50">
+                <div className="bg-gradient-to-br from-slate-500 to-slate-600 p-6 rounded-3xl shadow-lg shadow-slate-500/30 text-white relative overflow-hidden group border border-slate-400/50">
                   <div className="absolute -top-4 -right-4 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500"><Activity className="w-32 h-32" /></div>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-100 mb-2 relative z-10">% Servito (R / P+R)</p>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-100 mb-2 relative z-10">Totale Anno Precedente</p>
+                  <p className="text-4xl md:text-5xl font-black font-mono tracking-tight relative z-10 drop-shadow-sm">{Math.round(totalSellinPY).toLocaleString('it-IT')}</p>
+                  <p className="text-sm font-medium text-slate-100 mt-2 relative z-10">Stesso periodo</p>
+                </div>
+                <div className={cn("p-6 rounded-3xl shadow-lg text-white relative overflow-hidden group border", deltaPercentage >= 0 ? "bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-emerald-500/30 border-emerald-400/50" : "bg-gradient-to-br from-red-500 to-red-600 shadow-red-500/30 border-red-400/50")}>
+                  <div className="absolute -top-4 -right-4 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500"><Activity className="w-32 h-32" /></div>
+                  <p className="text-[11px] font-bold uppercase tracking-widest mb-2 relative z-10 opacity-90">Delta % (Anno Su Anno)</p>
                   <div className="flex items-baseline gap-2 relative z-10 drop-shadow-sm">
                     <p className="text-4xl md:text-5xl font-black font-mono tracking-tight">
-                      {servitoPercentage.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
+                      {deltaPercentage > 0 ? '+' : ''}{deltaPercentage.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
                     </p>
-                    <span className="text-sm font-bold text-emerald-200">YTD</span>
                   </div>
-                  <p className="text-sm font-medium text-emerald-100 mt-2 relative z-10">Incidenza globale</p>
+                  <p className="text-sm font-medium mt-2 relative z-10 opacity-90">Trend di crescita</p>
                 </div>
               </div>
 
@@ -278,7 +278,7 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
                           <Area 
                             type="monotone" 
                             dataKey="sellin" 
-                            name="Corrente"
+                            name="Anno Corrente"
                             stroke={getProductColor(productName)} 
                             fillOpacity={1} 
                             fill={`url(#color${productName.replace(/\s/g, '')})`} 
@@ -288,7 +288,7 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
                           <Line 
                             type="monotone" 
                             dataKey="sellinPY" 
-                            name="Precedente"
+                            name="Anno Precedente"
                             stroke="#cbd5e1" 
                             strokeWidth={3} 
                             strokeDasharray="5 5"

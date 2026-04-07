@@ -14,10 +14,8 @@ interface AlertsCenterProps {
 
 const AlertsCenter: React.FC<AlertsCenterProps> = ({ show, onClose, installations, onSelectInstallation }) => {
   const critical = useMemo(() =>
-    installations.filter(i => getAlertStatus(i) === 'critical'), [installations]);
+    installations.filter(i => i.rows.some(r => isExpiredDate(r['Ultima Verifica Erogatore']))), [installations]);
   const warning = useMemo(() =>
-    installations.filter(i => getAlertStatus(i) === 'warning'), [installations]);
-  const expiringSoon = useMemo(() =>
     installations.filter(i => i.rows.some(r => isExpiringSoon(r['Ultima Verifica Erogatore']))), [installations]);
 
   const totalAlerts = critical.length + warning.length;
@@ -30,8 +28,10 @@ const AlertsCenter: React.FC<AlertsCenterProps> = ({ show, onClose, installation
       msg += `⚠️ La verifica biennale dell'erogatore risulta SCADUTA.\n`;
       msg += `Ultima verifica registrata: ${expiredRows[0]?.['Ultima Verifica Erogatore'] || 'N/D'}\n\n`;
     }
-    if (inst.ebitda < 0) {
-      msg += `📉 EBITDA 2025: ${inst.ebitda.toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}\n\n`;
+    const expiringRows = inst.rows.filter(r => isExpiringSoon(r['Ultima Verifica Erogatore']));
+    if (expiringRows.length > 0) {
+      msg += `⚠️ La verifica biennale dell'erogatore risulta in SCADENZA.\n`;
+      msg += `Ultima verifica registrata: ${expiringRows[0]?.['Ultima Verifica Erogatore'] || 'N/D'}\n\n`;
     }
     msg += `Si prega di contattare l'ufficio tecnico per regolarizzare la situazione.\n\nGrazie.\n_Sistema MODULA_`;
     return msg;
@@ -87,11 +87,10 @@ const AlertsCenter: React.FC<AlertsCenterProps> = ({ show, onClose, installation
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
 
               {/* KPI Row */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: 'Critici', value: critical.length, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100' },
-                  { label: 'Attenzione', value: warning.length, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
-                  { label: 'Scadenza Prox', value: expiringSoon.length, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
+                  { label: 'Critici (Scaduti)', value: critical.length, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100' },
+                  { label: 'Scadenza Prox', value: warning.length, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
                 ].map(kpi => (
                   <div key={kpi.label} className={cn('rounded-xl p-3 border text-center', kpi.bg, kpi.border)}>
                     <p className={cn('text-2xl font-black', kpi.color)}>{kpi.value}</p>
@@ -113,7 +112,7 @@ const AlertsCenter: React.FC<AlertsCenterProps> = ({ show, onClose, installation
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-sm text-slate-900 truncate">{inst.city}</p>
                           <p className="text-[10px] text-red-600 font-bold">
-                            {inst.ebitda.toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })} · Verifica scaduta
+                            Verifica scaduta
                           </p>
                         </div>
                         <div className="flex gap-1.5 shrink-0">
@@ -148,9 +147,7 @@ const AlertsCenter: React.FC<AlertsCenterProps> = ({ show, onClose, installation
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-sm text-slate-900 truncate">{inst.city}</p>
                           <p className="text-[10px] text-amber-700 font-bold">
-                            {inst.ebitda < 0
-                              ? `EBITDA: ${inst.ebitda.toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}`
-                              : 'Verifica biennale in scadenza / scaduta'}
+                            Verifica biennale in scadenza proxy
                           </p>
                         </div>
                         <div className="flex gap-1.5 shrink-0">
