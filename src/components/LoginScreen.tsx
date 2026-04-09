@@ -23,20 +23,23 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   return (
     <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 overflow-hidden">
       {/* Video Background - Benzina/Carburante */}
-      <video 
-        autoPlay 
-        loop 
-        muted 
-        playsInline
-        className="absolute inset-0 w-full h-full object-cover"
-      >
-        <source src="https://videos.pexels.com/video-files/3196039/3196039-hd_1920_1080_25fps.mp4" type="video/mp4" />
-        <source src="https://videos.pexels.com/video-files/2040097/2040097-hd_1920_1080_30fps.mp4" type="video/mp4" />
-        Your browser does not support the video tag.
-      </video>
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900">
+        <video 
+          autoPlay 
+          loop 
+          muted 
+          playsInline
+          className="w-full h-full object-cover opacity-80"
+          poster="https://images.pexels.com/photos/3196039/pexels-photo-3196039.jpeg?auto=compress&cs=tinysrgb&w=1920"
+        >
+          <source src="https://player.vimeo.com/external/371842363.sd.mp4?s=d4f8c0e0a8b0e0f0c0d0e0f0c0d0e0f0c0d0e0f0&profile_id=164&oauth2_token_id=57447761" type="video/mp4" />
+          <source src="https://videos.pexels.com/video-files/3196039/3196039-hd_1920_1080_25fps.mp4" type="video/mp4" />
+          <source src="https://videos.pexels.com/video-files/2040097/2040097-hd_1920_1080_30fps.mp4" type="video/mp4" />
+        </video>
+      </div>
       
-      {/* Overlay scuro per migliorare la leggibilità */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      {/* Overlay più leggero per migliorare la leggibilità mantenendo visibile il video */}
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
 
       {/* Vibrant Background Blobs - Enhanced */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/30 blur-[120px] rounded-full animate-pulse" />
