@@ -16,18 +16,23 @@ __pycache__/
 env/
 venv/
 .venv/
-.env
-.env.local
-.env.*
+.ENV
+.python-version
 
 # Logs
 *.log
+
+# Environment variables
+.env
+.env.local
+.env.*
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*.tmp
 
 # OS
 .DS_Store

@@ -48,14 +48,14 @@
   background: #94a3b8; 
 }
 
-/* WOW effect for MAP - brighter and more vibrant */
+/* Normal map styling - clean and clear */
 .map-glow-effect {
-  filter: brightness(1.15) contrast(1.05);
-  transition: filter 0.3s ease;
+  filter: none;
+  transition: none;
 }
 
 .map-glow-effect:hover {
-  filter: brightness(1.2) contrast(1.1);
+  filter: none;
 }
 
 /* Enhanced marker pulse animation */
