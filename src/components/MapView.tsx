@@ -73,7 +73,6 @@ const MapView: React.FC<MapViewProps> = ({
         zoom={initialZoom} 
         style={{ height: '100%', width: '100%' }}
         zoomControl={false}
-        className="map-glow-effect"
       >
         <MapUpdater center={initialCenter} zoom={initialZoom} />
         <TileLayer
