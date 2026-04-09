@@ -8,18 +8,43 @@ let cachedData: { allRows: InstallationRow[], uniqueInstallations: Installation[
 let lastFetchTime = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-function parseMonetaryValue(val: string | undefined): number {
+function parseNumericValue(val: string | undefined): number {
   if (!val) return 0;
-  // Handle both "1.200,50" and "1200.50" formats, plus currency symbols
-  const clean = val.replace(/[^\d,.-]/g, '');
-  if (clean.includes(',') && clean.includes('.')) {
-    // Standard European format: 1.200,50
-    return parseFloat(clean.replace(/\./g, '').replace(',', '.'));
+  // Remove currency, units and spaces
+  let clean = val.replace(/[^\d,.-]/g, '').trim();
+  if (!clean) return 0;
+
+  const lastComma = clean.lastIndexOf(',');
+  const lastDot = clean.lastIndexOf('.');
+
+  // 1. Both separators present: 1.200,50 or 1,200.50
+  if (lastComma !== -1 && lastDot !== -1) {
+    if (lastComma > lastDot) {
+      // Italian style: 1.200,50
+      return parseFloat(clean.replace(/\./g, '').replace(',', '.')) || 0;
+    } else {
+      // International style: 1,200.50
+      return parseFloat(clean.replace(/,/g, '')) || 0;
+    }
   }
-  if (clean.includes(',')) {
-    // Simple European format: 1200,50
-    return parseFloat(clean.replace(',', '.'));
+
+  // 2. Only comma present: 1200,50
+  if (lastComma !== -1) {
+    return parseFloat(clean.replace(',', '.')) || 0;
   }
+
+  // 3. Only dot present: 1.200 or 1.2
+  if (lastDot !== -1) {
+    const parts = clean.split('.');
+    // If exactly 3 digits after dot, it's likely a thousands separator (Italian Excel)
+    // e.g., "1.200" -> 1200. But "1.2" -> 1.2
+    if (parts[parts.length - 1].length === 3) {
+      return parseFloat(clean.replace(/\./g, '')) || 0;
+    }
+    return parseFloat(clean) || 0;
+  }
+
+  // 4. No separators
   return parseFloat(clean) || 0;
 }
 
@@ -70,9 +95,9 @@ export async function fetchInstallations(forceRefresh = false): Promise<{ allRow
               region: first.Regione || '',
               address: first.Indirizzo || '',
               cap: first.CAP || '',
-              ebitda: parseMonetaryValue(first.EBITDA2025),
-              sell: parseMonetaryValue(first.Sell2025),
-              revenue: parseMonetaryValue(first.Sell2025), // Map sell to revenue for compatibility with MapView UI
+              ebitda: parseNumericValue(first.EBITDA2025),
+              sell: parseNumericValue(first.Sell2025),
+              revenue: parseNumericValue(first.Sell2025),
               manager: first.Gestore || '',
               email: first.Email || '',
               phone: first.Telefono || '',

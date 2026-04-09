@@ -99,9 +99,9 @@ const DetailModal: React.FC<DetailModalProps> = ({
     const tankId = row["ID Serbatoio"];
     if (tankId && !seenTanks.has(tankId)) {
       seenTanks.add(tankId);
-      const vol = parseFloat(row["Volume Serbatoio"]?.replace(',', '.') || '0');
+      const rawVol = row["Volume Serbatoio"];
+      const volume = parseNumericValue(rawVol);
       const product = row["Prodotto Serbatoio"] || 'N/D';
-      const volume = isNaN(vol) ? 0 : vol;
 
       if (product.toLowerCase().includes('sspb') || product.toLowerCase().includes('benzina')) {
         productDataMap.Benzina.volume += volume;
