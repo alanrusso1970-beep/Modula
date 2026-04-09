@@ -74,9 +74,9 @@ const InstallationCard: React.FC<InstallationCardProps> = ({
         
         <div className="space-y-1.5">
           <div>
-            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">EBITDA 2025</p>
-            <p className={cn("text-sm font-mono font-bold", inst.ebitda < 0 ? "text-red-600" : "text-emerald-600")}>
-              {inst.ebitda.toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}
+            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Litri Erogati 2025</p>
+            <p className="text-sm font-mono font-bold text-blue-600">
+              {inst.sell.toLocaleString('it-IT', { maximumFractionDigits: 0 })} L
             </p>
           </div>
           <div>
