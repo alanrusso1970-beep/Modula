@@ -8,6 +8,21 @@ let cachedData: { allRows: InstallationRow[], uniqueInstallations: Installation[
 let lastFetchTime = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+function parseMonetaryValue(val: string | undefined): number {
+  if (!val) return 0;
+  // Handle both "1.200,50" and "1200.50" formats, plus currency symbols
+  const clean = val.replace(/[^\d,.-]/g, '');
+  if (clean.includes(',') && clean.includes('.')) {
+    // Standard European format: 1.200,50
+    return parseFloat(clean.replace(/\./g, '').replace(',', '.'));
+  }
+  if (clean.includes(',')) {
+    // Simple European format: 1200,50
+    return parseFloat(clean.replace(',', '.'));
+  }
+  return parseFloat(clean) || 0;
+}
+
 export async function fetchInstallations(forceRefresh = false): Promise<{ allRows: InstallationRow[], uniqueInstallations: Installation[] }> {
   const now = Date.now();
   if (!forceRefresh && cachedData && (now - lastFetchTime < CACHE_DURATION)) {
@@ -55,8 +70,9 @@ export async function fetchInstallations(forceRefresh = false): Promise<{ allRow
               region: first.Regione || '',
               address: first.Indirizzo || '',
               cap: first.CAP || '',
-              ebitda: parseFloat(first.EBITDA2025?.replace(/\s/g, '').replace('€', '').replace(/\./g, '').replace(',', '.') || '0') || 0,
-              sell: parseFloat(first.Sell2025?.replace(/\s/g, '').replace('€', '').replace(/\./g, '').replace(',', '.') || '0') || 0,
+              ebitda: parseMonetaryValue(first.EBITDA2025),
+              sell: parseMonetaryValue(first.Sell2025),
+              revenue: parseMonetaryValue(first.Sell2025), // Map sell to revenue for compatibility with MapView UI
               manager: first.Gestore || '',
               email: first.Email || '',
               phone: first.Telefono || '',

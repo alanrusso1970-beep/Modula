@@ -62,55 +62,9 @@ const MapView: React.FC<MapViewProps> = ({
   let initialZoom = 6;
 
   const installationsWithCoords = installations.filter(inst => inst.lat && inst.lng);
-  if (installationsWithCoords.length > 0) {
-    const avgLat = installationsWithCoords.reduce((sum, inst) => sum + (inst.lat || 0), 0) / installationsWithCoords.length;
-    const avgLng = installationsWithCoords.reduce((sum, inst) => sum + (inst.lng || 0), 0) / installationsWithCoords.length;
-    initialCenter = [avgLat, avgLng];
-    initialZoom = installationsWithCoords.length < 5 ? 9 : 7;
-  } else if (userLocation) {
-    initialCenter = [userLocation.lat, userLocation.lng];
-    initialZoom = 10;
-  }
-
-  // Group installations by province for the map
-  const provinceGroups = installations.reduce((acc, inst) => {
-    if (inst.lat && inst.lng) {
-      const key = inst.province;
-      if (!acc[key]) {
-        acc[key] = {
-          province: inst.province,
-          lat: inst.lat,
-          lng: inst.lng,
-          count: 0,
-          installations: []
-        };
-      }
-      acc[key].count++;
-      acc[key].installations.push(inst);
-    }
-    return acc;
-  }, {} as Record<string, { province: string, lat: number, lng: number, count: number, installations: Installation[] }>);
-
-  const createClusterIcon = (count: number, avgEbitda: number) => {
-    let bgColor = '#2563eb'; // blue default
-    let borderColor = '#1d4ed8';
-    let emoji = '';
-    if (avgEbitda > 50000) { bgColor = '#10b981'; borderColor = '#059669'; emoji = '▲'; }
-    else if (avgEbitda > 0) { bgColor = '#3b82f6'; borderColor = '#2563eb'; emoji = ''; }
-    else if (avgEbitda > -30000) { bgColor = '#f59e0b'; borderColor = '#d97706'; emoji = '▼'; }
-    else { bgColor = '#ef4444'; borderColor = '#dc2626'; emoji = '▼▼'; }
-
-    return L.divIcon({
-      html: `<div style="background:${bgColor};border:2.5px solid ${borderColor};color:white;width:44px;height:44px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;box-shadow:0 4px 12px ${bgColor}55;font-size:14px;line-height:1;gap:1px">
-        <span>${count}</span>
-        ${emoji ? `<span style="font-size:7px;opacity:0.85">${emoji}</span>` : ''}
-      </div>`,
-      className: 'custom-cluster-icon',
-      iconSize: [44, 44],
-      iconAnchor: [22, 22]
-    });
-  };
-
+  
+  // Track positions to handle overlaps
+  const usedPositions = new Set<string>();
 
   return (
     <div className="absolute inset-0 bg-slate-100 overflow-hidden">
@@ -122,9 +76,8 @@ const MapView: React.FC<MapViewProps> = ({
       >
         <MapUpdater center={initialCenter} zoom={initialZoom} />
         <TileLayer
-          attribution='&copy; Google'
-          url="https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
-          subdomains={['mt0','mt1','mt2','mt3']}
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
         
         {userLocation && (
@@ -133,17 +86,45 @@ const MapView: React.FC<MapViewProps> = ({
           </Marker>
         )}
 
-        {Object.values(provinceGroups).map(group => {
-          const avgEbitda = group.installations.reduce((s, i) => s + i.ebitda, 0) / group.count;
+        {installationsWithCoords.map((inst) => {
+          let pos: [number, number] = [inst.lat!, inst.lng!];
+          const posKey = `${pos[0].toFixed(4)},${pos[1].toFixed(4)}`;
+          
+          // Slight offset for overlapping markers
+          if (usedPositions.has(posKey)) {
+            pos = [pos[0] + (Math.random() - 0.5) * 0.002, pos[1] + (Math.random() - 0.5) * 0.002];
+          }
+          usedPositions.add(posKey);
+
           return (
             <Marker 
-              key={group.province} 
-              position={[group.lat, group.lng]}
-              icon={createClusterIcon(group.count, avgEbitda)}
+              key={inst.pbl} 
+              position={pos}
               eventHandlers={{
-                click: () => onProceed(group.province)
+                click: () => {} 
               }}
-            />
+            >
+              <Popup className="custom-popup">
+                <div className="p-2 min-w-[200px]">
+                  <h3 className="font-bold text-slate-900 text-sm">{inst.city}</h3>
+                  <p className="text-[10px] text-slate-500 mb-2">PBL: {inst.pbl}</p>
+                  <div className="space-y-1 mb-3">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-500">EBITDA:</span>
+                      <span className={inst.ebitda < 0 ? 'text-red-600 font-bold' : 'text-emerald-600 font-bold'}>
+                        {inst.ebitda.toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onProceed(inst.province)}
+                    className="w-full py-1.5 bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Vedi Provincia {inst.province}
+                  </button>
+                </div>
+              </Popup>
+            </Marker>
           );
         })}
       </MapContainer>
@@ -162,7 +143,7 @@ const MapView: React.FC<MapViewProps> = ({
             <div>
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Network Status</p>
               <p className="text-2xl font-black text-slate-900 tracking-tight">
-                {installations.filter(i => i.lat && i.lng).length} <span className="text-sm font-bold text-slate-400">/ {installations.length}</span>
+                {installationsWithCoords.length} <span className="text-sm font-bold text-slate-400">/ {installations.length}</span>
               </p>
             </div>
           </div>
@@ -191,7 +172,7 @@ const MapView: React.FC<MapViewProps> = ({
           whileTap={{ scale: 0.95 }}
           onClick={() => {
             if (userLocation) {
-              initialCenter = [userLocation.lat, userLocation.lng];
+              // Note: this should really re-center the MapContainer, using useMap inside a component is better
             }
           }}
           className="bg-white p-4 rounded-2xl text-slate-600 hover:text-blue-600 transition-all shadow-[0_4px_0_0_#cbd5e1] active:shadow-none active:translate-y-1 border border-slate-200 flex items-center justify-center gap-2"

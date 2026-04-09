@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, X, Send, Fuel, TrendingUp, TrendingDown, AlertTriangle, MapPin, Sparkles } from 'lucide-react';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Installation } from '../types';
 import { cn } from '../lib/utils';
 import { getAlertStatus, isExpiredDate } from '../lib/healthScore';
@@ -11,6 +12,11 @@ interface Message {
   text: string;
   timestamp: Date;
 }
+
+// Access the API key defined in vite.config.ts
+const GEMINI_API_KEY = (process.env as any).GEMINI_API_KEY || '';
+const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
+const model = genAI ? genAI.getGenerativeModel({ model: "gemini-1.5-flash" }) : null;
 
 interface AIAssistantProps {
   installations: Installation[];
@@ -159,19 +165,42 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ installations }) => {
     if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, open]);
 
-  const sendMessage = useCallback((text: string) => {
-    if (!text.trim()) return;
+  const sendMessage = useCallback(async (text: string) => {
+    if (!text.trim() || isTyping) return;
     const userMsg: Message = { id: Date.now().toString(), role: 'user', text: text.trim(), timestamp: new Date() };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setIsTyping(true);
-    setTimeout(() => {
-      const answer = parseQuery(text, installations);
-      const aiMsg: Message = { id: (Date.now() + 1).toString(), role: 'assistant', text: answer, timestamp: new Date() };
-      setMessages(prev => [...prev, aiMsg]);
+
+    try {
+      if (!model) {
+        const answer = parseQuery(text, installations);
+        setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', text: answer, timestamp: new Date() }]);
+      } else {
+        const stats = {
+          total: installations.length,
+          avgEbitda: installations.reduce((acc, curr) => acc + (curr.ebitda || 0), 0) / (installations.length || 1),
+          negativeEbitdaCount: installations.filter(i => i.ebitda < 0).length
+        };
+
+        const prompt = `
+          Sei l'assistente AI di MODULA (software gestione impianti carburante).
+          Dati attuali: ${stats.total} impianti, EBITDA medio ${stats.avgEbitda.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' })}, ${stats.negativeEbitdaCount} impianti in perdita.
+          
+          Domanda utente: "${text}"
+          
+          Rispondi in modo professionale e conciso in italiano.
+        `;
+        const result = await model.generateContent(prompt);
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', text: result.response.text(), timestamp: new Date() }]);
+      }
+    } catch (error) {
+      console.error("Gemini Error:", error);
+      setMessages(prev => [...prev, { id: 'err', role: 'assistant', text: "Scusa, ho difficoltà a connettermi al servizio AI. Riprova tra poco.", timestamp: new Date() }]);
+    } finally {
       setIsTyping(false);
-    }, 600);
-  }, [installations]);
+    }
+  }, [installations, isTyping]);
 
   // Render markdown-like bold text
   const renderText = (text: string) =>

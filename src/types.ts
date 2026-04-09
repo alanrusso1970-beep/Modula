@@ -43,6 +43,7 @@ export interface Installation {
   rows: InstallationRow[];
   lat?: number;
   lng?: number;
+  revenue?: number;
 }
 
 export interface RealTimeData {
