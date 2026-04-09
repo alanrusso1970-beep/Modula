@@ -24,6 +24,7 @@ import {
 import { saveAs } from 'file-saver';
 import { Installation } from '../types';
 import { cn } from '../lib/utils';
+import { parseNumericValue } from '../services/dataService';
 import Plant2D from './Plant2D';
 
 const Plant3D = React.lazy(() => import('./Plant3D'));

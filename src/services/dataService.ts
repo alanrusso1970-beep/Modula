@@ -8,7 +8,7 @@ let cachedData: { allRows: InstallationRow[], uniqueInstallations: Installation[
 let lastFetchTime = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-function parseNumericValue(val: string | undefined): number {
+export function parseNumericValue(val: string | undefined): number {
   if (!val) return 0;
   // Remove currency, units and spaces
   let clean = val.replace(/[^\d,.-]/g, '').trim();

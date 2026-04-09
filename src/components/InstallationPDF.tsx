@@ -1,6 +1,7 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import { Installation } from '../types';
+import { parseNumericValue } from '../services/dataService';
 
 // Register fonts for professional look
 // Removed custom font registration due to format compatibility issues
@@ -286,24 +287,6 @@ export const InstallationPDF = ({ installation, planImage }: InstallationPDFProp
       {/* Tank Summary Stats */}
       <View style={{ flexDirection: 'row', gap: 10, marginBottom: 15 }}>
         {['Benzina', 'Gasolio', 'Supreme'].map(prod => {
-          const parseNumericValue = (val: string | undefined): number => {
-            if (!val) return 0;
-            let clean = val.replace(/[^\d,.-]/g, '').trim();
-            if (!clean) return 0;
-            const lastComma = clean.lastIndexOf(',');
-            const lastDot = clean.lastIndexOf('.');
-            if (lastComma !== -1 && lastDot !== -1) {
-              return lastComma > lastDot ? parseFloat(clean.replace(/\./g, '').replace(',', '.')) : parseFloat(clean.replace(/,/g, ''));
-            }
-            if (lastComma !== -1) return parseFloat(clean.replace(',', '.'));
-            if (lastDot !== -1) {
-              const parts = clean.split('.');
-              if (parts[parts.length - 1].length === 3) return parseFloat(clean.replace(/\./g, ''));
-              return parseFloat(clean);
-            }
-            return parseFloat(clean) || 0;
-          };
-
           const total = installation.rows.reduce((acc, row) => {
             if ((row["Prodotto Serbatoio"] || '').toLowerCase().includes(prod.toLowerCase())) {
               return acc + parseNumericValue(row["Volume Serbatoio"]);
