@@ -47,3 +47,60 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8; 
 }
+
+/* WOW effect for MAP - brighter and more vibrant */
+.map-glow-effect {
+  filter: brightness(1.15) contrast(1.05);
+  transition: filter 0.3s ease;
+}
+
+.map-glow-effect:hover {
+  filter: brightness(1.2) contrast(1.1);
+}
+
+/* Enhanced marker pulse animation */
+.leaflet-marker-icon {
+  transition: transform 0.2s ease;
+}
+
+.leaflet-marker-icon:hover {
+  transform: scale(1.2);
+  z-index: 1000 !important;
+}
+
+/* Custom popup styling for better visibility */
+.custom-popup .leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.custom-popup .leaflet-popup-tip {
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Animated gradient border for map container */
+.absolute.inset-0.bg-slate-100::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, 
+    rgba(59, 130, 246, 0.03),
+    rgba(147, 51, 234, 0.03),
+    rgba(236, 72, 153, 0.03),
+    rgba(59, 130, 246, 0.03)
+  );
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
