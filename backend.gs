@@ -194,9 +194,9 @@ function getRealTimeData(targetPbl) {
     const dashboardData = filteredRows.map(row => ({
       mese: row[colMesi],
       prodotto: row[colProdotto],
-      sellin: parseFloat(row[colSellin]) || 0,
-      servito: parseFloat(row[colServito]) || 0,
-      sellinPY: parseFloat(row[colSellinPY]) || 0
+      sellin: parseItalianNumber(row[colSellin]),
+      servito: parseItalianNumber(row[colServito]),
+      sellinPY: parseItalianNumber(row[colSellinPY])
     })); [cite: 48]
 
     const result = {
@@ -211,6 +211,24 @@ function getRealTimeData(targetPbl) {
   } catch (error) {
     return { success: false, message: "Errore nel recupero dati: " + error.toString() }; [cite: 51]
   }
+}
+
+function parseItalianNumber(val) {
+  if (val === null || val === undefined) return 0;
+  if (typeof val === 'number') return val;
+  var str = val.toString().trim();
+  if (!str) return 0;
+  // Remove currency symbols, spaces, and anything except digits, comma, dot, and minus
+  var clean = str.replace(/[^\d,.-]/g, '');
+  if (clean.indexOf(',') !== -1) {
+    // Treat dot as thousand, comma as decimal
+    clean = clean.replace(/\./g, '').replace(',', '.');
+  } else {
+    // No comma. Treat all dots as thousand
+    clean = clean.replace(/\./g, '');
+  }
+  var result = parseFloat(clean);
+  return isNaN(result) ? 0 : result;
 }
 
 function convertSheetToCsv(sheet) {

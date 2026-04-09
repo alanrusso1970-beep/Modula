@@ -8,44 +8,33 @@ let cachedData: { allRows: InstallationRow[], uniqueInstallations: Installation[
 let lastFetchTime = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-export function parseNumericValue(val: string | undefined): number {
-  if (!val) return 0;
-  // Remove currency, units and spaces
-  let clean = val.replace(/[^\d,.-]/g, '').trim();
-  if (!clean) return 0;
+/**
+ * Robust numeric parser for Italian formatting.
+ * Treats '.' as thousands separator and ',' as decimal separator.
+ */
+export function parseNumericValue(val: any): number {
+  if (val === null || val === undefined) return 0;
+  if (typeof val === 'number') return val;
+  
+  const str = String(val).trim();
+  if (!str) return 0;
 
-  const lastComma = clean.lastIndexOf(',');
-  const lastDot = clean.lastIndexOf('.');
+  // Remove everything except digits, comma, dot, and minus
+  let clean = str.replace(/[^\d,.-]/g, '');
 
-  // 1. Both separators present: 1.200,50 or 1,200.50
-  if (lastComma !== -1 && lastDot !== -1) {
-    if (lastComma > lastDot) {
-      // Italian style: 1.200,50
-      return parseFloat(clean.replace(/\./g, '').replace(',', '.')) || 0;
-    } else {
-      // International style: 1,200.50
-      return parseFloat(clean.replace(/,/g, '')) || 0;
-    }
+  if (clean.includes(',')) {
+    // Standard Italian format: 1.200,50 or 1200,50
+    // Remove dots, replace comma with dot for JS parseFloat
+    clean = clean.replace(/\./g, '').replace(',', '.');
+  } else {
+    // No comma. User says dot is thousands separator.
+    // 1.200 -> 1200
+    // 12.000 -> 12000
+    clean = clean.replace(/\./g, '');
   }
 
-  // 2. Only comma present: 1200,50
-  if (lastComma !== -1) {
-    return parseFloat(clean.replace(',', '.')) || 0;
-  }
-
-  // 3. Only dot present: 1.200 or 1.2
-  if (lastDot !== -1) {
-    const parts = clean.split('.');
-    // If exactly 3 digits after dot, it's likely a thousands separator (Italian Excel)
-    // e.g., "1.200" -> 1200. But "1.2" -> 1.2
-    if (parts[parts.length - 1].length === 3) {
-      return parseFloat(clean.replace(/\./g, '')) || 0;
-    }
-    return parseFloat(clean) || 0;
-  }
-
-  // 4. No separators
-  return parseFloat(clean) || 0;
+  const result = parseFloat(clean);
+  return isNaN(result) ? 0 : result;
 }
 
 export async function fetchInstallations(forceRefresh = false): Promise<{ allRows: InstallationRow[], uniqueInstallations: Installation[] }> {
