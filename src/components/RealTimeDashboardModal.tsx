@@ -83,13 +83,18 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
     return () => clearInterval(interval);
   }, [loading]);
 
-  // Group data by product
+  // Group data by product and sort by month
   const dataByProduct = data.reduce((acc, curr) => {
     const prod = curr.prodotto || 'Altro';
     if (!acc[prod]) acc[prod] = [];
     acc[prod].push(curr);
     return acc;
   }, {} as Record<string, RealTimeData[]>);
+
+  // Sort each product's data by month
+  Object.keys(dataByProduct).forEach(product => {
+    dataByProduct[product].sort((a, b) => Number(a.mese) - Number(b.mese));
+  });
 
   const getProductColor = (productName: string) => {
     const name = productName.toLowerCase();
