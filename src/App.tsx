@@ -71,10 +71,21 @@ export default function App() {
   const [realTimeData, setRealTimeData] = useState<RealTimeData[]>([]);
   const [realTimePlant, setRealTimePlant] = useState<Installation | null>(null);
   const [realTimeError, setRealTimeError] = useState<string | null>(null);
+  const [realTimeCache, setRealTimeCache] = useState<Record<string, RealTimeData[]>>({});
 
   const fetchRealTimeData = async (plant: Installation) => {
     setRealTimePlant(plant);
     setShowRealTimePopup(true);
+    
+    // Check local cache first
+    if (realTimeCache[plant.pbl]) {
+      console.log("React Cache Hit for " + plant.pbl);
+      setRealTimeData(realTimeCache[plant.pbl]);
+      setIsFetchingRealTime(false);
+      setRealTimeError(null);
+      return;
+    }
+
     setIsFetchingRealTime(true);
     setRealTimeData([]);
     setRealTimeError(null);
@@ -91,6 +102,8 @@ export default function App() {
       const result = await response.json();
       if (result.success) {
         setRealTimeData(result.data);
+        // Save to cache
+        setRealTimeCache(prev => ({ ...prev, [plant.pbl]: result.data }));
       } else {
         setRealTimeError(result.message || "Errore sconosciuto dal server.");
       }
@@ -456,31 +469,35 @@ export default function App() {
       </header>
 
       <main className="flex-1 relative overflow-hidden">
-        <Suspense fallback={<div className="p-8"><Skeleton className="w-full h-full rounded-2xl" /></div>}>
-          <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait">
             {loading ? (
             <motion.div 
               key="loading-skeleton"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0, filter: 'blur(10px)' }}
+              animate={{ opacity: 1, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, filter: 'blur(20px)' }}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
               className="p-8 space-y-8 max-w-7xl mx-auto w-full h-full overflow-hidden"
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {[...Array(10)].map((_, i) => (
-                  <div key={`skeleton-${i}`} className="bg-slate-900 border border-slate-800 shadow-md flex flex-col justify-between h-[160px] p-4 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-8 h-8 bg-slate-800/50 rounded-bl-xl" />
+                  <div key={`skeleton-${i}`} className="bg-slate-900/40 border border-white/5 shadow-md flex flex-col justify-between h-[160px] p-4 relative overflow-hidden glass-morphism animate-slow-pulse">
+                    <div className="absolute top-0 right-0 w-8 h-8 bg-white/5 rounded-bl-xl" />
                     <div className="space-y-3">
                       <div className="flex justify-between">
-                        <Skeleton className="w-16 h-3 bg-slate-800" />
-                        <Skeleton className="w-4 h-4 bg-slate-800" />
+                        <Skeleton className="w-16 h-3 bg-slate-800/50" />
+                        <Skeleton className="w-4 h-4 bg-slate-800/50" />
                       </div>
-                      <Skeleton className="w-3/4 h-4 bg-slate-800" />
-                      <Skeleton className="w-1/2 h-2 bg-slate-800" />
+                      <Skeleton className="w-3/4 h-4 bg-slate-800/50" />
+                      <Skeleton className="w-1/2 h-2 bg-slate-800/50" />
                     </div>
                     <div className="space-y-2">
-                      <Skeleton className="w-full h-2 bg-blue-900/30" />
-                      <Skeleton className="w-full h-2 bg-emerald-900/30" />
+                      <div className="w-full h-1.5 bg-slate-800/30 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500/20 w-1/2 animate-shimmer" />
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-800/30 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500/20 w-1/3 animate-shimmer" />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -489,17 +506,18 @@ export default function App() {
           ) : view === 'map' ? (
             <motion.div 
               key="map"
-              initial={{ opacity: 0, scale: 1.05, filter: 'blur(10px)' }}
-              animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-              exit={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }}
+              initial={{ opacity: 0, filter: 'blur(20px)', scale: 1.02 }}
+              animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
+              exit={{ opacity: 0, filter: 'blur(20px)', scale: 0.98 }}
               transition={{ 
-                duration: 0.6, 
+                duration: 0.8, 
                 ease: [0.16, 1, 0.3, 1]
               }}
               className="h-full"
             >
-              <MapView 
-                installations={filteredInstallations} 
+              <Suspense fallback={<div className="p-8 h-full bg-slate-900/20 backdrop-blur-md rounded-2xl border border-white/5 flex items-center justify-center font-mono text-blue-500/50 text-[10px] tracking-[0.3em] uppercase animate-pulse">Initializing_GIS_Modules...</div>}>
+                <MapView 
+                  installations={filteredInstallations} 
                 onProceed={(province) => {
                   if (province && !selectedProvinces.includes(province)) {
                     setSelectedProvinces([...selectedProvinces, province]);
@@ -509,28 +527,32 @@ export default function App() {
                 onResetProvince={() => setSelectedProvinces([])}
                 geocodingStatus={geocodingStatus}
               />
+              </Suspense>
             </motion.div>
           ) : view === 'converter' ? (
             <motion.div 
               key="converter"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, x: 40, filter: 'blur(10px)' }}
+              animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, x: -40, filter: 'blur(10px)' }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
               className="h-full overflow-y-auto"
             >
-              <ExcelConverter />
+              <Suspense fallback={<div className="p-8 h-full bg-slate-900/20 backdrop-blur-md rounded-2xl border border-white/5 flex items-center justify-center font-mono text-amber-500/50 text-[10px] tracking-[0.3em] uppercase animate-pulse">Loading_Ingest_Protocol...</div>}>
+                <ExcelConverter />
+              </Suspense>
             </motion.div>
           ) : (
             <motion.div 
               key="list"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0, y: 40, filter: 'blur(10px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, y: -40, filter: 'blur(10px)' }}
               transition={{ 
-                duration: 0.6, 
+                duration: 0.7, 
                 ease: [0.16, 1, 0.3, 1]
               }}
-              className="p-8 space-y-8 max-w-7xl mx-auto w-full overflow-y-auto h-full scroll-smooth"
+              className="p-8 space-y-8 max-w-7xl mx-auto w-full overflow-y-auto h-full scroll-smooth custom-scrollbar"
             >
               <motion.div 
                 variants={{
@@ -599,7 +621,6 @@ export default function App() {
             </motion.div>
             )}
           </AnimatePresence>
-        </Suspense>
       </main>
 
       <AnimatePresence>

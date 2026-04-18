@@ -25,14 +25,41 @@ function doPost(e) {
 
 function getAllRealTimeData(targetPbl) {
   try {
-    var fileIterator = DriveApp.searchFiles("title contains 'Export_STWD_'");
-    var latestFile = null;
-    var latestDate = 0;
-    while (fileIterator.hasNext()) {
-      var file = fileIterator.next();
-      var created = file.getDateCreated().getTime();
-      if (created > latestDate) { latestDate = created; latestFile = file; }
+    var cache = CacheService.getScriptCache();
+    var cacheKey = "realtime_" + targetPbl;
+    var cachedData = cache.get(cacheKey);
+    
+    if (cachedData) {
+      console.log("Cache Hit: Data for " + targetPbl);
+      return JSON.parse(cachedData);
     }
+
+    var props = PropertiesService.getScriptProperties();
+    var latestFileId = props.getProperty("LATEST_FILE_ID");
+    var latestFileTimestamp = props.getProperty("LATEST_FILE_TIME");
+    var now = new Date().getTime();
+    
+    var latestFile = null;
+    
+    // Se non abbiamo un ID o se sono passati più di 10 minuti, cerchiamo il file
+    if (!latestFileId || !latestFileTimestamp || (now - parseInt(latestFileTimestamp)) > 600000) {
+      console.log("Searching Drive for latest file...");
+      var fileIterator = DriveApp.searchFiles("title contains 'Export_STWD_'");
+      var latestDate = 0;
+      while (fileIterator.hasNext()) {
+        var file = fileIterator.next();
+        var created = file.getDateCreated().getTime();
+        if (created > latestDate) { latestDate = created; latestFile = file; }
+      }
+      if (latestFile) {
+        props.setProperty("LATEST_FILE_ID", latestFile.getId());
+        props.setProperty("LATEST_FILE_TIME", now.toString());
+      }
+    } else {
+      console.log("Using cached file ID: " + latestFileId);
+      latestFile = DriveApp.getFileById(latestFileId);
+    }
+
     if (!latestFile) return { success: false, message: "File non trovato." };
     var ss = SpreadsheetApp.open(latestFile);
     var allData = [];
@@ -42,7 +69,12 @@ function getAllRealTimeData(targetPbl) {
     // Estrazione GPL
     allData = allData.concat(fetchFromSheet(ss, "DatiLPG", targetPbl, true));
 
-    return { success: true, pbl: targetPbl, data: allData };
+    var result = { success: true, pbl: targetPbl, data: allData };
+    
+    // Salva in cache per 10 minuti (600 secondi)
+    cache.put(cacheKey, JSON.stringify(result), 600);
+    
+    return result;
   } catch (error) {
     return { success: false, message: error.toString() };
   }
@@ -136,6 +168,14 @@ function processExcelData(extractedData) {
       }
     }
     
+    // Aggiorna immediatamente la proprietà del file più recente
+    var props = PropertiesService.getScriptProperties();
+    props.setProperty("LATEST_FILE_ID", ss.getId());
+    props.setProperty("LATEST_FILE_TIME", new Date().getTime().toString());
+    
+    // Pulisci la cache generale per forzare il refresh al prossimo accesso
+    CacheService.getScriptCache().removeAll(["LATEST_FILE_ID"]); // Non necessario se usiamo solo PropertiesService per l'ID, ma utile se avessimo cache globale
+
     return {
       success: true,
       spreadsheetUrl: ss.getUrl(),

@@ -193,44 +193,60 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
   if (!plant) return null;
 
   return (
-    <div className="fixed inset-0 z-[4000] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[4000] flex items-center justify-center p-0 md:p-4 overflow-hidden">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         onClick={onClose}
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
+        className="absolute inset-0 bg-slate-950/40 backdrop-blur-xl"
       />
       <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative bg-white w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]"
+        initial={{ opacity: 0, scale: 0.98, filter: 'blur(20px)', y: 20 }}
+        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)', y: 0 }}
+        exit={{ opacity: 0, scale: 0.98, filter: 'blur(20px)', y: 20 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="relative bg-slate-950/80 w-full max-w-5xl md:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh] border border-white/10 glass-morphism premium-shadow"
       >
-        <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900 sticky top-0 z-20 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+        <div className="p-6 border-b border-white/5 flex items-center justify-between bg-transparent sticky top-0 z-20 backdrop-blur-xl">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-slate-950 border-2 border-slate-700 rounded-sm flex items-center justify-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-blue-500/10" />
+            <div className="w-12 h-12 bg-slate-900/50 border border-white/10 rounded-xl flex items-center justify-center relative overflow-hidden shadow-inner">
+              <div className="absolute inset-0 bg-blue-500/5" />
               <Monitor className="w-6 h-6 text-blue-400 relative z-10" />
             </div>
             <div>
-              <h3 className="text-xl font-black text-slate-100 tracking-[0.1em] uppercase">TELEMETRY_DASHBOARD</h3>
-              <p className="text-slate-400 text-[10px] font-mono tracking-widest uppercase mt-1">{plant.city} - PBL_NODE: <span className="text-slate-200 font-bold">{plant.pbl}</span></p>
+              <h3 className="text-xl font-black text-slate-100 tracking-[0.1em] uppercase">TELEMETRY_SYSTEM</h3>
+              <p className="text-slate-400 text-[10px] font-mono tracking-widest uppercase mt-1">{plant.city} - PBL: <span className="text-slate-200 font-bold">{plant.pbl}</span></p>
             </div>
           </div>
           <motion.button 
             whileHover={{ rotate: 90, scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             onClick={onClose}
-            className="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/30 rounded-sm transition-all shadow-[inset_0_0_8px_rgba(244,63,94,0.2)]"
+            className="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/20 rounded-xl transition-all shadow-lg"
           >
             <X className="w-5 h-5" />
           </motion.button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-950 font-mono text-slate-300">
+        <motion.div 
+          initial="hidden"
+          animate="show"
+          variants={{
+            hidden: { opacity: 0 },
+            show: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.08
+              }
+            }
+          }}
+          className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 bg-transparent font-mono text-slate-300 custom-scrollbar"
+        >
           {loading ? (
             <div className="h-[400px] flex flex-col items-center justify-center gap-6 max-w-sm mx-auto w-full px-6">
-              <div className="w-16 h-16 bg-slate-900 border border-blue-500/50 rounded-sm flex items-center justify-center mb-2 shadow-[inset_0_0_15px_rgba(59,130,246,0.2)]">
+              <div className="w-16 h-16 bg-white/5 border border-blue-500/20 rounded-2xl flex items-center justify-center mb-2 shadow-xl backdrop-blur-md">
                 <Database className="w-8 h-8 text-blue-500 animate-pulse" />
               </div>
               <div className="w-full space-y-2">
@@ -238,14 +254,14 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
                   <span>Data Ingestion (G-Drive)</span>
                   <span className="text-blue-400 drop-shadow-[0_0_5px_rgba(59,130,246,0.5)]">{syncProgress}%</span>
                 </div>
-                <div className="h-2 bg-slate-900 rounded-sm overflow-hidden border border-slate-800">
+                <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
                   <motion.div
                     className="h-full bg-blue-500 relative overflow-hidden"
                     initial={{ width: 0 }}
                     animate={{ width: `${syncProgress}%` }}
                     transition={{ type: "tween", ease: "linear", duration: 0.3 }}
                   >
-                    <div className="absolute top-0 bottom-0 left-0 w-20 bg-gradient-to-r from-transparent via-white/40 to-transparent -skew-x-12 animate-[shimmer_2s_infinite]" />
+                    <div className="absolute top-0 bottom-0 left-0 w-20 bg-gradient-to-r from-transparent via-white/40 to-transparent -skew-x-12 animate-shimmer" />
                   </motion.div>
                 </div>
               </div>
@@ -253,42 +269,57 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
           ) : data.length > 0 ? (
             <>
               {/* Summary Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-slate-900 border border-slate-800 shadow-[inset_0_0_20px_rgba(59,130,246,0.1)] p-6 rounded-sm text-slate-200 relative overflow-hidden group">
-                  <div className="absolute -top-4 -right-4 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500"><Activity className="w-32 h-32 text-blue-500" /></div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 relative z-10">VOL_YTD_ACTUAL</p>
-                  <p className="text-4xl md:text-5xl font-black font-mono tracking-tight relative z-10 text-slate-100 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]">{Math.round(totalSellin).toLocaleString('it-IT')}</p>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400/80 mt-3 relative z-10">DELTA VS_PREVIOUS</p>
-                  <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-blue-600 to-blue-400" />
-                </div>
-                <div className="bg-slate-900 border border-slate-800 shadow-[inset_0_0_20px_rgba(255,255,255,0.02)] p-6 rounded-sm text-slate-200 relative overflow-hidden group">
-                  <div className="absolute -top-4 -right-4 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500"><Activity className="w-32 h-32 text-slate-500" /></div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 relative z-10">VOL_YTD_PREVIOUS</p>
-                  <p className="text-4xl md:text-5xl font-black font-mono tracking-tight relative z-10 text-slate-400">{Math.round(totalSellinPY).toLocaleString('it-IT')}</p>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mt-3 relative z-10">ARCHIVED DATA</p>
-                  <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-slate-600 to-slate-500" />
-                </div>
-                <div className={cn("p-6 rounded-sm relative overflow-hidden group border bg-slate-900", deltaPercentage >= 0 ? "shadow-[inset_0_0_20px_rgba(16,185,129,0.1)] border-emerald-500/20" : "shadow-[inset_0_0_20px_rgba(244,63,94,0.1)] border-rose-500/20")}>
-                  <div className="absolute -top-4 -right-4 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500"><Activity className={cn("w-32 h-32", deltaPercentage >= 0 ? "text-emerald-500" : "text-rose-500")} /></div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 relative z-10">DELTA_%_YOY</p>
-                  <div className="flex items-baseline gap-2 relative z-10">
-                    <p className={cn("text-4xl md:text-5xl font-black font-mono tracking-tight", deltaPercentage >= 0 ? "text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]")}>
-                      {deltaPercentage > 0 ? '+' : ''}{deltaPercentage.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                  { label: 'VOL_YTD_ACTUAL', value: totalSellin, py: false, trend: deltaPercentage >= 0 },
+                  { label: 'VOL_YTD_PREVIOUS', value: totalSellinPY, py: true, trend: null },
+                  { label: 'DELTA_%_YOY', value: deltaPercentage, py: false, trend: deltaPercentage >= 0, isPerc: true }
+                ].map((kpi, i) => (
+                  <motion.div 
+                    key={kpi.label}
+                    variants={{
+                      hidden: { opacity: 0, y: 20 },
+                      show: { opacity: 1, y: 0 }
+                    }}
+                    className={cn(
+                      "p-6 rounded-2xl relative overflow-hidden group border backdrop-blur-md transition-all hover:bg-white/5 shadow-xl glass-card",
+                      kpi.trend === true ? "border-emerald-500/20" : kpi.trend === false ? "border-rose-500/20" : "border-white/5"
+                    )}
+                  >
+                    <div className="absolute -top-4 -right-4 p-4 opacity-5 group-hover:opacity-10 transition-opacity duration-500">
+                      <Activity className={cn("w-32 h-32", kpi.trend === true ? "text-emerald-500" : kpi.trend === false ? "text-rose-500" : "text-white")} />
+                    </div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 relative z-10">{kpi.label}</p>
+                    <p className={cn(
+                      "text-4xl font-black font-mono tracking-tight relative z-10",
+                      kpi.trend === true ? "text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" : 
+                      kpi.trend === false ? "text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]" : "text-slate-100 drop-shadow-[0_0_8px_rgba(59,130,246,0.3)]"
+                    )}>
+                      {kpi.isPerc ? `${kpi.value > 0 ? '+' : ''}${kpi.value.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%` : Math.round(kpi.value).toLocaleString('it-IT')}
                     </p>
-                  </div>
-                  <p className={cn("text-[10px] font-bold uppercase tracking-widest mt-3 relative z-10", deltaPercentage >= 0 ? "text-emerald-500/80" : "text-rose-500/80")}>GROWTH_TREND</p>
-                  <div className={cn("absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r", deltaPercentage >= 0 ? "from-emerald-600 to-emerald-400" : "from-rose-600 to-rose-400")} />
-                </div>
+                    <div className={cn(
+                      "absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r",
+                      kpi.trend === true ? "from-emerald-600 to-emerald-400" : 
+                      kpi.trend === false ? "from-rose-600 to-rose-400" : "from-blue-600 to-blue-400"
+                    )} />
+                  </motion.div>
+                ))}
               </div>
 
               {/* Total Unified Chart */}
-              <div className="bg-slate-900 p-6 md:p-8 rounded-sm border border-slate-800 shadow-md mb-10 overflow-hidden">
-                <div className="flex items-center gap-4 mb-8 border-b border-slate-800/50 pb-4">
-                  <div className="w-12 h-12 rounded-sm flex items-center justify-center bg-blue-500/10 border border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+              <motion.div 
+                variants={{
+                  hidden: { opacity: 0, scale: 0.98 },
+                  show: { opacity: 1, scale: 1 }
+                }}
+                className="bg-slate-900/40 p-6 md:p-8 rounded-2xl border border-white/5 shadow-xl backdrop-blur-md mb-10 overflow-hidden"
+              >
+                <div className="flex items-center gap-4 mb-8 border-b border-white/5 pb-4">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-blue-500/10 border border-white/10 shadow-lg">
                     <Activity className="w-6 h-6 text-blue-400" />
                   </div>
                   <div>
-                    <h4 className="text-xl font-black text-slate-100 tracking-widest uppercase">GLOBAL_VOL (W_GPL)</h4>
+                    <h4 className="text-xl font-black text-slate-100 tracking-widest uppercase">GLOBAL_VOL_TREND</h4>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1">MONTHLY_HISTORY: ACTUAL_VS_PREVIOUS</p>
                   </div>
                 </div>
@@ -300,24 +331,28 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
                       <YAxis fontSize={11} fontWeight="bold" tick={{ fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(value) => `${(value / 1000).toLocaleString('it-IT')}k`} dx={-10} />
                       <ReTooltip content={<CustomTooltip />} cursor={{ fill: '#0f172a' }} />
                       <Legend verticalAlign="top" height={50} iconType="square" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', color:'#94a3b8', borderBottom: '1px solid #1e293b', paddingBottom: '20px' }} />
-                      <Bar dataKey="sellin" name="ACTUAL_YEAR" fill="#3b82f6" radius={[2, 2, 0, 0]} barSize={24} />
-                      <Bar dataKey="sellinPY" name="PREVIOUS_YEAR" fill="#475569" radius={[2, 2, 0, 0]} barSize={24} />
+                      <Bar dataKey="sellin" name="ACTUAL_YEAR" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={24} />
+                      <Bar dataKey="sellinPY" name="PREVIOUS_YEAR" fill="#475569" radius={[4, 4, 0, 0]} barSize={24} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              </div>
+              </motion.div>
 
 
               {/* Analytics Suite Button */}
               <div className="mb-10 flex">
                 <motion.button
+                  variants={{
+                    hidden: { opacity: 0, y: 10 },
+                    show: { opacity: 1, y: 0 }
+                  }}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setShowAnalytics(true)}
-                  className="flex-1 py-4 rounded-sm border border-indigo-500/40 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-black uppercase text-[11px] tracking-[0.2em] flex items-center justify-center gap-3 shadow-[inset_0_0_20px_rgba(99,102,241,0.15)] transition-all group"
+                  className="flex-1 py-5 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 font-black uppercase text-[11px] tracking-[0.2em] flex items-center justify-center gap-3 shadow-xl backdrop-blur-md transition-all group"
                 >
                   <BarChart2 className="w-5 h-5 group-hover:animate-pulse" />
-                  OPEN_ANALYTICS_SUITE
+                  OPEN_ANALYTICS_PANEL
                   <span className="text-[9px] text-indigo-500/60 font-mono ml-2">[ MIX · RADAR · HEATMAP · MoM ]</span>
                 </motion.button>
               </div>
@@ -402,7 +437,7 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
               </div>
             </div>
           )}
-        </div>
+        </motion.div>
 
         <div className="p-6 border-t border-slate-800 bg-slate-950 flex justify-end gap-3">
           <button 
@@ -413,45 +448,62 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
           </button>
         </div>
 
-        {/* Analytics Sub-Modal */}
         <AnimatePresence>
-          {showAnalytics && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-30 bg-slate-950/95 backdrop-blur-md flex flex-col overflow-hidden rounded-2xl"
-            >
-              {/* Sub-header */}
-              <div className="p-6 border-b border-slate-800 bg-slate-900 flex items-center justify-between sticky top-0 z-10 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-indigo-500/10 border border-indigo-500/30 rounded-sm flex items-center justify-center shadow-[inset_0_0_15px_rgba(99,102,241,0.2)]">
-                    <BarChart2 className="w-6 h-6 text-indigo-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black text-slate-100 tracking-[0.1em] uppercase">ANALYTICS_SUITE</h3>
-                    <p className="text-slate-400 text-[10px] font-mono tracking-widest uppercase mt-1">{plant.city} — ADVANCED_METRICS_PANEL</p>
-                  </div>
-                </div>
-                <motion.button
-                  whileHover={{ rotate: 90, scale: 1.1 }}
-                  onClick={() => setShowAnalytics(false)}
-                  className="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/30 rounded-sm transition-all"
-                >
-                  <X className="w-5 h-5" />
-                </motion.button>
-              </div>
-
-              {/* Sub-content */}
-              <div className="flex-1 overflow-y-auto p-8 space-y-8">
-                {/* Row 1: MIX + RADAR */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* DISPENSING_MIX */}
-                  <div className="bg-slate-900 p-6 rounded-sm border border-slate-800 shadow-md relative overflow-hidden flex flex-col">
-                    <div className="border-b border-slate-800/50 pb-4">
-                      <h4 className="text-xl font-black text-slate-100 tracking-widest uppercase">DISPENSING_MIX</h4>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1">VOL_DISTRIBUTION (EX_GPL)</p>
+            {showAnalytics && (
+              <motion.div
+                initial={{ opacity: 0, filter: 'blur(20px)', scale: 0.98 }}
+                animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
+                exit={{ opacity: 0, filter: 'blur(20px)', scale: 0.98 }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                className="absolute inset-0 z-30 bg-slate-950/95 backdrop-blur-2xl flex flex-col overflow-hidden md:rounded-2xl"
+              >
+                {/* Sub-header */}
+                <div className="p-6 border-b border-white/5 bg-transparent flex items-center justify-between sticky top-0 z-10 backdrop-blur-xl">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-indigo-500/10 border border-white/10 rounded-xl flex items-center justify-center shadow-lg">
+                      <BarChart2 className="w-6 h-6 text-indigo-400" />
                     </div>
+                    <div>
+                      <h3 className="text-xl font-black text-slate-100 tracking-[0.1em] uppercase">ANALYTICS_PANEL</h3>
+                      <p className="text-slate-400 text-[10px] font-mono tracking-widest uppercase mt-1">{plant.city} — ADVANCED_STATS</p>
+                    </div>
+                  </div>
+                  <motion.button
+                    whileHover={{ rotate: 90, scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setShowAnalytics(false)}
+                    className="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/20 rounded-xl transition-all shadow-lg"
+                  >
+                    <X className="w-5 h-5" />
+                  </motion.button>
+                </div>
+
+                {/* Sub-content */}
+                <motion.div 
+                  initial="hidden"
+                  animate="show"
+                  variants={{
+                    hidden: { opacity: 0 },
+                    show: {
+                      opacity: 1,
+                      transition: {
+                        staggerChildren: 0.1
+                      }
+                    }
+                  }}
+                  className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 custom-scrollbar"
+                >
+                  {/* Row 1: MIX + RADAR */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* DISPENSING_MIX */}
+                    <motion.div 
+                      variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}
+                      className="bg-slate-900/40 p-6 rounded-2xl border border-white/5 shadow-xl relative overflow-hidden flex flex-col backdrop-blur-md"
+                    >
+                      <div className="border-b border-white/5 pb-4">
+                        <h4 className="text-xl font-black text-slate-100 tracking-widest uppercase">DISPENSING_MIX</h4>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1">VOL_DISTRIBUTION (EX_GPL)</p>
+                      </div>
                     <div className="flex-1 min-h-[250px] flex items-center justify-center relative mt-6">
                       <ResponsiveContainer width="100%" height={250}>
                         <PieChart>
@@ -467,7 +519,7 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
                         <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-0.5">SERVITO_SHARE</p>
                       </div>
                     </div>
-                  </div>
+                    </motion.div>
 
                   {/* PREMIUM_RADAR */}
                   <div className="bg-gradient-to-br from-slate-900 to-slate-950 p-6 rounded-sm shadow-xl border border-slate-700 relative overflow-hidden flex flex-col text-slate-200">
@@ -542,19 +594,19 @@ const RealTimeDashboardModal: React.FC<RealTimeDashboardModalProps> = ({
                     </ResponsiveContainer>
                   </div>
                 </div>
-              </div>
+                </motion.div>
 
-              {/* Sub-footer */}
-              <div className="p-6 border-t border-slate-800 bg-slate-950 flex justify-end">
-                <button
-                  onClick={() => setShowAnalytics(false)}
-                  className="px-10 border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/20 font-bold uppercase tracking-widest text-[10px] py-4 rounded-sm shadow-[inset_0_0_10px_rgba(99,102,241,0.1)] transition-all active:scale-[0.98]"
-                >
-                  CLOSE_ANALYTICS
-                </button>
-              </div>
-            </motion.div>
-          )}
+                {/* Sub-footer */}
+                <div className="p-6 border-t border-slate-800 bg-slate-950 flex justify-end">
+                  <button
+                    onClick={() => setShowAnalytics(false)}
+                    className="px-10 border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/20 font-bold uppercase tracking-widest text-[10px] py-4 rounded-sm shadow-[inset_0_0_10px_rgba(99,102,241,0.1)] transition-all active:scale-[0.98]"
+                  >
+                    CLOSE_ANALYTICS
+                  </button>
+                </div>
+              </motion.div>
+            )}
         </AnimatePresence>
       </motion.div>
     </div>

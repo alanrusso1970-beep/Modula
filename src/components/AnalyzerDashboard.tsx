@@ -77,46 +77,69 @@ const AnalyzerDashboard: React.FC<AnalyzerDashboardProps> = ({
   ], [top5, bottom5]);
 
   return (
-    <div className={cn("fixed inset-0 z-[3000] flex items-center justify-center p-4 transition-all duration-300", show ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none")}>
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={onClose} />
+    <div className={cn("fixed inset-0 z-[3000] flex items-center justify-center p-0 md:p-4 transition-all duration-500", show ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none")}>
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: show ? 1 : 0 }}
+        className="absolute inset-0 bg-slate-950/40 backdrop-blur-xl" 
+        onClick={onClose} 
+      />
       <motion.div
-        initial={false}
-        animate={show ? { scale: 1, y: 0, opacity: 1 } : { scale: 0.95, y: 20, opacity: 0 }}
-        className="relative bg-slate-950 w-full max-w-6xl rounded-sm shadow-2xl p-6 md:p-8 space-y-8 max-h-[90vh] overflow-y-auto border border-slate-700"
+        initial={{ scale: 0.98, y: 20, opacity: 0, filter: 'blur(10px)' }}
+        animate={show ? { scale: 1, y: 0, opacity: 1, filter: 'blur(0px)' } : { scale: 0.98, y: 20, opacity: 0, filter: 'blur(10px)' }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="relative bg-slate-950/80 w-full max-w-6xl md:rounded-2xl shadow-2xl p-6 md:p-8 space-y-8 max-h-[95vh] overflow-y-auto border border-white/10 glass-morphism premium-shadow custom-scrollbar"
       >
         {/* Header */}
-        <div className="flex justify-between items-center pb-4 border-b border-slate-800">
+        <div className="flex justify-between items-center pb-4 border-b border-white/5">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-slate-900 border-2 border-slate-700 rounded-sm flex items-center justify-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-blue-500/10" />
+            <div className="w-12 h-12 bg-slate-900/50 border border-white/10 rounded-xl flex items-center justify-center relative overflow-hidden shadow-inner">
+              <div className="absolute inset-0 bg-blue-500/5" />
               <TrendingUp className="w-6 h-6 text-blue-400 relative z-10" />
             </div>
             <div>
-              <h3 className="text-xl font-black text-slate-100 tracking-[0.1em] uppercase">SYSTEM_ANALYZER_DASHBOARD</h3>
-              <p className="text-slate-400 text-[10px] font-mono tracking-widest uppercase mt-1">{filteredInstallations.length} NODES_ONLINE · GLOBAL_OVERVIEW</p>
+              <h3 className="text-xl font-black text-slate-100 tracking-[0.1em] uppercase">SYSTEM_ANALYZER</h3>
+              <p className="text-slate-400 text-[10px] font-mono tracking-widest uppercase mt-1">{filteredInstallations.length} NODES_ONLINE · GLOBAL_DASHBOARD</p>
             </div>
           </div>
-          <motion.button whileHover={{ rotate: 90, scale: 1.1 }} onClick={onClose} className="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/30 rounded-sm transition-all shadow-[inset_0_0_8px_rgba(244,63,94,0.2)]">
+          <motion.button whileHover={{ rotate: 90, scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={onClose} className="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white border border-rose-500/20 rounded-xl transition-all shadow-lg">
             <X className="w-5 h-5" />
           </motion.button>
         </div>
 
         {/* KPI Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <motion.div 
+          initial="hidden"
+          animate={show ? "show" : "hidden"}
+          variants={{
+            hidden: { opacity: 0 },
+            show: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.05
+              }
+            }
+          }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-4"
+        >
           {[
             { label: 'EBITDA_GLOBAL', formatted: totalEbitda.toLocaleString('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }), color: totalEbitda < 0 ? '#ef4444' : '#10b981' },
             { label: 'VOL_SELL_IN', formatted: `${Math.round(totalSell).toLocaleString('it-IT')} L`, color: '#3b82f6' },
             { label: 'NODES_LOSS', formatted: `${negCount}`, color: '#ef4444' },
             { label: 'NODES_CRITICAL', formatted: `${criticalCount}`, color: '#f59e0b' },
           ].map((kpi, i) => (
-            <motion.div key={kpi.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
-              className="bg-slate-900 rounded-sm p-4 border border-slate-800 shadow-[inset_0_0_15px_rgba(255,255,255,0.02)] relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-8 h-8 bg-slate-800/50 rounded-bl-sm" />
+            <motion.div key={kpi.label} 
+              variants={{
+                hidden: { opacity: 0, y: 15 },
+                show: { opacity: 1, y: 0 }
+              }}
+              className="bg-white/5 rounded-2xl p-4 border border-white/5 shadow-xl relative overflow-hidden group transition-all hover:bg-white/10 backdrop-blur-md">
+              <div className="absolute top-0 right-0 w-8 h-8 bg-white/5 rounded-bl-2xl" />
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 relative z-10">{kpi.label}</p>
               <p className="text-xl font-mono font-black tracking-tight drop-shadow-[0_0_8px_currentColor] relative z-10" style={{ color: kpi.color }}>{kpi.formatted}</p>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

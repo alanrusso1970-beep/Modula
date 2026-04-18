@@ -35,16 +35,14 @@ const InstallationCard: React.FC<InstallationCardProps> = ({
         hidden: { opacity: 0, y: 20 },
         show: { opacity: 1, y: 0 }
       }}
-      whileHover={{ y: -2, scale: 1.01 }}
+      whileHover={{ y: -5, scale: 1.02, filter: 'brightness(1.1)' }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       onClick={() => onSelect(inst)}
       className={cn(
-        "bg-slate-900 p-4 rounded-sm border shadow-[inset_0_0_15px_rgba(0,0,0,0.5)] hover:shadow-[0_0_15px_rgba(59,130,246,0.1),inset_0_0_15px_rgba(0,0,0,0.5)] transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between h-full min-h-[160px]",
-        alertStatus === 'critical' ? 'border-rose-500/50 hover:border-rose-400' :
-        alertStatus === 'warning' ? 'border-amber-500/50 hover:border-amber-400' : 'border-slate-700 hover:border-blue-500/50'
+        "p-4 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between h-full min-h-[160px] glass-morphism premium-shadow",
+        alertStatus === 'critical' ? 'border-rose-500/30 ring-1 ring-rose-500/20' :
+        alertStatus === 'warning' ? 'border-amber-500/30 ring-1 ring-amber-500/20' : 'border-white/5 hover:border-white/10'
       )}
-      style={{
-        backgroundImage: 'linear-gradient(225deg, rgba(30,41,59,0.5) 0%, transparent 20%)'
-      }}
     >
       <div className="relative z-10 h-full flex flex-col">
         <div className="flex justify-between items-start mb-3">
@@ -56,19 +54,19 @@ const InstallationCard: React.FC<InstallationCardProps> = ({
           </div>
           <div className="flex gap-1.5">
             <motion.button 
-              whileHover={{ scale: 1.1 }}
+              whileHover={{ scale: 1.1, rotate: 5 }}
               whileTap={{ scale: 0.9 }}
               onClick={(e) => {
                 e.stopPropagation();
                 onFetchRealTimeData(inst);
               }}
-              className="w-7 h-7 rounded-sm bg-emerald-500/10 flex items-center justify-center text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 transition-all border border-emerald-500/30"
+              className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 transition-all border border-emerald-500/20 shadow-lg"
               title="Vendite Live"
             >
-              <Monitor className="w-3.5 h-3.5" />
+              <Monitor className="w-4 h-4" />
             </motion.button>
-            <div className="w-7 h-7 rounded-sm bg-slate-800 flex items-center justify-center group-hover:bg-blue-600 group-hover:border-blue-500 transition-colors border border-slate-700 shadow-inner">
-              <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-white" />
+            <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-blue-600 transition-all border border-white/5 shadow-inner">
+              <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white" />
             </div>
           </div>
         </div>

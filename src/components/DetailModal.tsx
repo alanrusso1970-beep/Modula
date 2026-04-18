@@ -186,17 +186,21 @@ const DetailModal: React.FC<DetailModalProps> = ({
   const mapUrl = `https://www.google.com/maps/search/?api=1&query=${addressQuery}`;
 
   return (
-    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-0 md:p-4 overflow-hidden">
       <motion.div 
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        initial={{ opacity: 0 }} 
+        animate={{ opacity: 1 }} 
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         onClick={onClose}
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
+        className="absolute inset-0 bg-slate-950/40 backdrop-blur-xl"
       />
       <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative bg-slate-950 w-full max-w-6xl h-full md:h-auto md:max-h-[90vh] md:rounded-sm overflow-hidden flex flex-col shadow-2xl border border-slate-700"
+        initial={{ opacity: 0, scale: 0.98, filter: 'blur(20px)', y: 20 }}
+        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)', y: 0 }}
+        exit={{ opacity: 0, scale: 0.98, filter: 'blur(20px)', y: 20 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="relative bg-slate-950/80 w-full max-w-6xl h-full md:h-auto md:max-h-[95vh] md:rounded-2xl overflow-hidden flex flex-col shadow-2xl border border-white/10 glass-morphism premium-shadow"
       >
         <div style={{ position: 'fixed', left: 0, top: 0, visibility: 'hidden', pointerEvents: 'none', zIndex: -1 }}>
           <Plant2D installation={installation} onCapture={handleCapture} />
@@ -278,20 +282,53 @@ const DetailModal: React.FC<DetailModalProps> = ({
           </motion.div>
         )}
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 bg-slate-950 font-mono text-slate-300">
+        <motion.div 
+          initial="hidden"
+          animate="show"
+          variants={{
+            hidden: { opacity: 0 },
+            show: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.08
+              }
+            }
+          }}
+          className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 bg-transparent font-mono text-slate-300 custom-scrollbar"
+        >
           <AnimatePresence mode="wait">
             {show3D ? (
-              <motion.div key="3d" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="space-y-8">
-                <React.Suspense fallback={<div className="w-full h-[400px] bg-slate-100 animate-pulse rounded-[2rem] flex items-center justify-center text-slate-400 font-bold">Caricamento Vista 3D...</div>}>
+              <motion.div 
+                key="3d" 
+                initial={{ opacity: 0, scale: 0.98, filter: 'blur(10px)' }} 
+                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }} 
+                exit={{ opacity: 0, scale: 0.98, filter: 'blur(10px)' }} 
+                className="space-y-8"
+              >
+                <React.Suspense fallback={<div className="w-full h-[400px] bg-white/5 animate-slow-pulse rounded-2xl flex items-center justify-center text-slate-500 font-bold border border-white/5">Caricamento Vista 3D...</div>}>
                   <Plant3D installation={installation} />
                 </React.Suspense>
               </motion.div>
             ) : (
-              <motion.div key="data" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-10">
+              <motion.div 
+                key="data" 
+                initial={{ opacity: 0, y: 10 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0, y: -10 }} 
+                className="space-y-10"
+              >
 
                 {/* Data Sections */}
-                <div className="bg-slate-900 rounded-sm p-4 md:p-6 border border-slate-800 shadow-md">
-                  <h4 className="text-[14px] font-black tracking-[0.2em] text-slate-200 uppercase mb-6 flex items-center gap-3"><TrendingUp className="w-6 h-6 text-blue-500" /> SYS_PERFORMANCE</h4>
+                <motion.div 
+                  variants={{
+                    hidden: { opacity: 0, y: 20 },
+                    show: { opacity: 1, y: 0 }
+                  }}
+                  className="bg-slate-900/50 rounded-2xl p-4 md:p-6 border border-white/5 shadow-xl backdrop-blur-md"
+                >
+                  <h4 className="text-[14px] font-black tracking-[0.2em] text-slate-200 uppercase mb-6 flex items-center gap-3">
+                    <TrendingUp className="w-6 h-6 text-blue-500" /> SYS_PERFORMANCE
+                  </h4>
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-1 space-y-4">
                       {performanceStats.map((item) => (
@@ -310,37 +347,55 @@ const DetailModal: React.FC<DetailModalProps> = ({
                     </div>
                     <div className="lg:col-span-2"><div className="h-[260px] bg-slate-950 rounded-sm p-4 border border-slate-800 shadow-inner"><ResponsiveContainer width="100%" height="100%"><BarChart data={tankData} margin={{ top: 20 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" /><XAxis dataKey="id" fontSize={10} tick={{ fill: '#64748b' }} axisLine={{stroke: '#334155'}} tickLine={false} /><YAxis fontSize={10} tick={{ fill: '#64748b' }} axisLine={false} tickLine={false} /><ReTooltip cursor={{fill: '#1e293b'}} contentStyle={{backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '4px', color: '#f1f5f9'}} itemStyle={{color: '#f1f5f9'}} /><Bar dataKey="volume" radius={[2, 2, 0, 0]} barSize={40}>{tankData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}</Bar></BarChart></ResponsiveContainer></div></div>
                   </div>
-                </div>
+                </motion.div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                   <div className="space-y-6">
+                   <motion.div 
+                    variants={{
+                      hidden: { opacity: 0, y: 20 },
+                      show: { opacity: 1, y: 0 }
+                    }}
+                    className="space-y-6"
+                  >
                     <h4 className="text-[14px] font-black tracking-[0.2em] text-slate-200 uppercase flex items-center gap-3"><Info className="w-6 h-6 text-blue-500" /> NODE_INFO</h4>
-                    <div className="bg-slate-900 rounded-sm p-4 md:p-6 space-y-3 border border-slate-800 shadow-md">
+                    <div className="bg-slate-900/40 rounded-2xl p-4 md:p-6 space-y-3 border border-white/5 shadow-md backdrop-blur-sm">
                       {[ { label: 'Gestore', value: installation.manager }, { label: 'Contratto Terreno', value: installation.contract }, { label: 'Contratto Gestore', value: installation.moso }, { label: 'Misura di Elettronico', value: installation.tls } ].map((item) => (
-                        <div key={item.label} className="flex justify-between items-center p-3 bg-slate-950 rounded-sm border border-slate-800 shadow-inner"><span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{item.label}</span><span className="text-sm font-black text-slate-300 flex items-center">{item.value || 'N/D'} {item.value && <CopyButton text={item.value} field={item.label} />}</span></div>
+                        <div key={item.label} className="flex justify-between items-center p-3 bg-slate-950/50 rounded-xl border border-white/5 shadow-inner transition-colors hover:bg-white/5"><span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{item.label}</span><span className="text-sm font-black text-slate-300 flex items-center">{item.value || 'N/D'} {item.value && <CopyButton text={item.value} field={item.label} />}</span></div>
                       ))}
                     </div>
-                  </div>
-                  <div className="space-y-6">
+                  </motion.div>
+                  <motion.div 
+                    variants={{
+                      hidden: { opacity: 0, y: 20 },
+                      show: { opacity: 1, y: 0 }
+                    }}
+                    className="space-y-6"
+                  >
                     <h4 className="text-[14px] font-black tracking-[0.2em] text-slate-200 uppercase flex items-center gap-3"><Phone className="w-6 h-6 text-blue-500" /> CONTACTS</h4>
-                    <div className="bg-slate-900 rounded-sm p-4 space-y-3 border border-slate-800 shadow-md">
-                       <div className="flex items-center gap-3 p-3 bg-slate-950 rounded-sm shadow-inner"><MapIcon className="w-4 h-4 text-emerald-500" /><div className="flex flex-col"><span className="text-xs font-bold text-slate-300 uppercase">{installation.city}</span><a href={mapUrl} target="_blank" rel="noopener noreferrer" className="text-[9px] font-black text-emerald-500 hover:text-emerald-400 uppercase tracking-widest mt-1">📍 Google Maps</a></div></div>
-                       <div className="flex items-center gap-3 p-3 bg-slate-950 rounded-sm shadow-inner"><Phone className="w-4 h-4 text-blue-500" /><div className="flex-1 flex justify-between items-center">{installation.phone ? <div className="flex items-center"><a href={`tel:${installation.phone}`} className="text-sm font-bold text-blue-400 hover:text-blue-300 underline">{installation.phone}</a><CopyButton text={installation.phone} field="phone" /></div> : <span className="text-sm">N/D</span>}{waLink && <a href={waLink} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/20 rounded-sm text-[9px] font-black uppercase tracking-widest">WhatsApp</a>}</div></div>
-                       <div className="flex items-center gap-3 p-3 bg-slate-950 rounded-sm shadow-inner"><Mail className="w-4 h-4 text-blue-500" />{installation.email ? <a href={`mailto:${installation.email}`} className="text-sm font-bold text-blue-400 hover:text-blue-300 underline">{installation.email}</a> : <span className="text-sm">N/D</span>}</div>
+                    <div className="bg-slate-900/40 rounded-2xl p-4 space-y-3 border border-white/5 shadow-md backdrop-blur-sm">
+                       <div className="flex items-center gap-3 p-3 bg-slate-950/50 rounded-xl shadow-inner border border-white/5"><MapIcon className="w-4 h-4 text-emerald-500" /><div className="flex flex-col"><span className="text-xs font-bold text-slate-300 uppercase">{installation.city}</span><a href={mapUrl} target="_blank" rel="noopener noreferrer" className="text-[9px] font-black text-emerald-500 hover:text-emerald-400 uppercase tracking-widest mt-1">📍 Google Maps</a></div></div>
+                       <div className="flex items-center gap-3 p-3 bg-slate-950/50 rounded-xl shadow-inner border border-white/5"><Phone className="w-4 h-4 text-blue-500" /><div className="flex-1 flex justify-between items-center">{installation.phone ? <div className="flex items-center"><a href={`tel:${installation.phone}`} className="text-sm font-bold text-blue-400 hover:text-blue-300 underline">{installation.phone}</a><CopyButton text={installation.phone} field="phone" /></div> : <span className="text-sm">N/D</span>}{waLink && <a href={waLink} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/20 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all">WhatsApp</a>}</div></div>
+                       <div className="flex items-center gap-3 p-3 bg-slate-950/50 rounded-xl shadow-inner border border-white/5"><Mail className="w-4 h-4 text-blue-500" />{installation.email ? <a href={`mailto:${installation.email}`} className="text-sm font-bold text-blue-400 hover:text-blue-300 underline">{installation.email}</a> : <span className="text-sm">N/D</span>}</div>
                     </div>
-                  </div>
+                  </motion.div>
                 </div>
 
-                <div className="space-y-6">
+                <motion.div 
+                  variants={{
+                    hidden: { opacity: 0, scale: 0.98 },
+                    show: { opacity: 1, scale: 1 }
+                  }}
+                  className="space-y-6"
+                >
                   <h4 className="text-[14px] font-black tracking-[0.2em] text-slate-200 uppercase flex items-center gap-3"><Database className="w-6 h-6 text-blue-500" /> STORAGE_ASSETS</h4>
-                  <div className="overflow-x-auto rounded-sm border border-slate-800 bg-slate-900 shadow-md">
+                  <div className="overflow-x-auto rounded-2xl border border-white/5 bg-slate-900/40 shadow-xl backdrop-blur-md">
                     <table className="w-full text-left text-xs whitespace-nowrap">
-                      <thead className="bg-slate-950 text-slate-500 uppercase tracking-widest text-[9px]"><tr><th className="px-5 py-4 font-black">Tipo</th><th className="px-5 py-4 font-black">Prodotto</th><th className="px-5 py-4 font-black">Capacità</th><th className="px-5 py-4 font-black">Erogatore</th><th className="px-5 py-4 font-black">Modello</th><th className="px-5 py-4 font-black">Ultima Verifica</th></tr></thead>
-                      <tbody className="divide-y divide-slate-800/50">
+                      <thead className="bg-slate-950/80 text-slate-500 uppercase tracking-widest text-[9px]"><tr><th className="px-5 py-4 font-black">Tipo</th><th className="px-5 py-4 font-black">Prodotto</th><th className="px-5 py-4 font-black">Capacità</th><th className="px-5 py-4 font-black">Erogatore</th><th className="px-5 py-4 font-black">Modello</th><th className="px-5 py-4 font-black">Ultima Verifica</th></tr></thead>
+                      <tbody className="divide-y divide-white/5">
                         {installation.rows.map((row, i) => {
                           const expired = isExpired(row["Ultima Verifica Erogatore"]);
                           return (
-                            <tr key={i} className="hover:bg-slate-800/50 transition-colors">
+                            <tr key={i} className="hover:bg-white/5 transition-colors">
                               <td className="px-5 py-4 font-bold text-slate-300">Serbatoio {row["ID Serbatoio"]}</td>
                               <td className="px-5 py-4 text-slate-400">{row["Prodotto Serbatoio"]}</td>
                               <td className="px-5 py-4 text-slate-400">{row["Volume Serbatoio"]} Kl</td>
@@ -353,11 +408,11 @@ const DetailModal: React.FC<DetailModalProps> = ({
                       </tbody>
                     </table>
                   </div>
-                </div>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </motion.div>
       </motion.div>
     </div>
   );

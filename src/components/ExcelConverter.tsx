@@ -208,21 +208,22 @@ const ExcelConverter: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-4 md:p-12">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-slate-950 rounded-sm border border-slate-700 shadow-2xl overflow-hidden"
+        initial={{ opacity: 0, scale: 0.98, filter: 'blur(20px)' }}
+        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="bg-slate-950/60 rounded-3xl border border-white/10 shadow-2xl overflow-hidden glass-morphism premium-shadow"
       >
         {/* Header */}
-        <div className="p-8 border-b border-slate-800 bg-slate-900 shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+        <div className="p-8 border-b border-white/5 bg-transparent shadow-lg backdrop-blur-xl">
           <div className="flex items-center gap-4 mb-2">
-            <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/30 rounded-sm flex items-center justify-center shadow-[inset_0_0_15px_rgba(59,130,246,0.2)]">
+            <div className="w-12 h-12 bg-blue-500/10 border border-white/10 rounded-xl flex items-center justify-center shadow-inner">
               <FileSpreadsheet className="w-6 h-6 text-blue-400" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-slate-100 uppercase tracking-widest">STWD_CONVERTER_PROTOCOL</h2>
-              <p className="text-slate-500 font-mono text-[10px] uppercase tracking-widest mt-1">Excel to Google Sheets & CSV Automated Pipeline</p>
+              <h2 className="text-xl font-black text-slate-100 uppercase tracking-widest">DATA_CONVERTER</h2>
+              <p className="text-slate-500 font-mono text-[10px] uppercase tracking-widest mt-1">EXCEL_TO_CLOUD_PROTOCOL_V.1.0</p>
             </div>
           </div>
         </div>
@@ -230,7 +231,7 @@ const ExcelConverter: React.FC = () => {
         <div className="p-8 space-y-8">
           {/* File Input */}
           <div className="space-y-4">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 drop-shadow-sm">UPLOAD_EXCEL_FILE (.xlsx, .xls)</label>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 opacity-60">UPLOAD_SOURCE</label>
             <div className="relative group">
               <input
                 type="file"
@@ -239,24 +240,24 @@ const ExcelConverter: React.FC = () => {
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               />
               <div className={cn(
-                "border border-dashed rounded-sm p-10 flex flex-col items-center justify-center transition-all bg-slate-900 shadow-inner",
-                file ? "border-emerald-500/50 shadow-[inset_0_0_20px_rgba(16,185,129,0.1)]" : "border-slate-700 hover:border-blue-500/50 hover:shadow-[inset_0_0_20px_rgba(59,130,246,0.1)]"
+                "border border-dashed rounded-2xl p-12 flex flex-col items-center justify-center transition-all bg-white/5 shadow-2xl backdrop-blur-md border-white/10",
+                file ? "border-emerald-500/40 ring-1 ring-emerald-500/20" : "hover:border-blue-500/40 hover:bg-white/10"
               )}>
                 <div className={cn(
-                  "w-16 h-16 rounded-sm flex items-center justify-center mb-4 transition-transform group-hover:scale-110 border",
-                  file ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : "bg-slate-800 text-slate-500 border-slate-700"
+                  "w-20 h-20 rounded-2xl flex items-center justify-center mb-6 transition-all group-hover:scale-110 border shadow-lg backdrop-blur-md",
+                  file ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/20" : "bg-white/5 text-slate-600 border-white/5"
                 )}>
-                  <FileText className="w-8 h-8" />
+                  <FileText className="w-10 h-10" />
                 </div>
                 {file ? (
                   <div className="text-center">
-                    <p className="text-emerald-400 font-mono font-bold text-sm tracking-tight">{file.name}</p>
+                    <p className="text-emerald-400 font-mono font-bold text-base tracking-tight">{file.name}</p>
                     <p className="text-slate-500 text-[10px] uppercase tracking-widest mt-2">{((file.size / 1024) / 1024).toFixed(2)} MB</p>
                   </div>
                 ) : (
                   <div className="text-center">
-                    <p className="text-slate-300 font-bold text-xs uppercase tracking-widest">DRAG_AND_DROP_OR_CLICK_TO_BROWSE</p>
-                    <p className="text-slate-600 text-[10px] font-mono uppercase tracking-widest mt-2">SUPPORTED_FORMATS: .XLSX, .XLS</p>
+                    <p className="text-slate-300 font-bold text-xs uppercase tracking-widest">Drag and drop file or click</p>
+                    <p className="text-slate-600 text-[10px] font-mono uppercase tracking-widest mt-2">XLSX, XLS · MAX 20MB</p>
                   </div>
                 )}
               </div>
@@ -271,21 +272,21 @@ const ExcelConverter: React.FC = () => {
               onClick={startConversion}
               disabled={!file || isProcessing}
               className={cn(
-                "w-full sm:w-auto px-12 py-4 rounded-sm font-black uppercase text-[11px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 border shadow-inner",
+                "w-full sm:w-auto px-16 py-5 rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 border shadow-2xl glass-card premium-shadow",
                 !file || isProcessing
-                  ? "bg-slate-900 border-slate-800 text-slate-600 cursor-not-allowed"
-                  : "bg-blue-600/10 border-blue-500/50 text-blue-400 hover:bg-blue-600/20 hover:text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                  ? "opacity-50 cursor-not-allowed border-white/5"
+                  : "bg-blue-600/10 border-blue-500/30 text-blue-400 hover:bg-blue-600/20 hover:text-blue-300"
               )}
             >
               {isProcessing ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  PROCESSING_DATA...
+                  PROCESSING_PROTOCOL...
                 </>
               ) : (
                 <>
                   <Play className="w-5 h-5 fill-current" />
-                  INITIATE_CONVERSION
+                  INITIATE_UPGRADE
                 </>
               )}
             </motion.button>
@@ -294,22 +295,24 @@ const ExcelConverter: React.FC = () => {
             <AnimatePresence>
               {(isProcessing || progress > 0) && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="w-full space-y-2 mt-4"
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  className="w-full space-y-4 mt-6"
                 >
-                  <div className="flex justify-between text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest px-1">
-                    <span>SYSTEM_PROGRESS</span>
-                    <span className="text-blue-400 drop-shadow-[0_0_3px_currentColor]">{progress}%</span>
+                  <div className="flex justify-between text-[10px] font-mono font-bold text-slate-500 uppercase tracking-widest px-1">
+                    <span>UPLOAD_INTEGRITY</span>
+                    <span className="text-blue-400 drop-shadow-[0_0_5px_currentColor]">{progress}%</span>
                   </div>
-                  <div className="h-1.5 bg-slate-900 rounded-sm overflow-hidden border border-slate-800">
+                  <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
                     <motion.div
-                      className="h-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]"
+                      className="h-full bg-blue-500 relative overflow-hidden"
                       initial={{ width: 0 }}
                       animate={{ width: `${progress}%` }}
                       transition={{ type: "spring", bounce: 0, duration: 0.5 }}
-                    />
+                    >
+                      <div className="absolute top-0 bottom-0 left-0 w-20 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer" />
+                    </motion.div>
                   </div>
                 </motion.div>
               )}
@@ -322,9 +325,9 @@ const ExcelConverter: React.FC = () => {
               <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Log di Sistema</h4>
               <span className="text-[10px] font-bold text-slate-400 font-mono">ID: {instanceId}</span>
             </div>
-            <div className="bg-slate-950 rounded-2xl p-6 h-52 overflow-y-auto font-mono text-[11px] border border-slate-800 shadow-2xl shadow-inner custom-scrollbar relative">
-              <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-                <Database className="w-12 h-12 text-blue-500" />
+            <div className="bg-slate-900/40 rounded-2xl p-6 h-56 overflow-y-auto font-mono text-[11px] border border-white/5 shadow-inner backdrop-blur-md custom-scrollbar relative">
+              <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+                <Database className="w-16 h-16 text-blue-500" />
               </div>
               {logs.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-slate-700 gap-2 opacity-50">
