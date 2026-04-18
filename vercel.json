@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "package.json", "use": "@vercel/static" }
+  ],
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "destination": "https://github.com/alanrusso1970-beep/Modula",
+      "permanent": true
+    }
+  ]
+}
